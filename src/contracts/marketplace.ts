@@ -141,6 +141,9 @@ export const contract = pfn([
         );
 
         // inlined
+        const onlyOneRequiredSigner = pisEmpty.$( tx.signatories.tail );
+
+        // inlined
         const nftSentToSigner =
         // `plet.in` to avoid inilining in recursive `some`
         plet(
@@ -189,6 +192,7 @@ export const contract = pfn([
         const paidFee = paidAmtToHash.$( ownerFee ).$( owner );
 
         return singleScriptInput
+        .and(  onlyOneRequiredSigner )
         .and(  nftSentToSigner )
         .and(  paidFee )
         .and(  paidToSeller )
