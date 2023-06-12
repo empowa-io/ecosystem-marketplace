@@ -2,12 +2,12 @@
 
 ## Index
 
-- project_overview
+- [project_overview](#project-overview)
 - [project_structure](./project_structure/README.md)
 
 ## Project overview
 
-# What is this? Where am I?
+### What is this? Where am I?
 
 this repository contains the source code for the Empowa ecosystem marketplace.
 
@@ -20,7 +20,7 @@ the above contains the actual contracts.
 
 the latter includes some scripts to interact with the compiled contracts.
 
-## Contracts interaction
+### Contracts interaction
 
 the project consists of 3 contracts in total:
 
@@ -31,7 +31,6 @@ the project consists of 3 contracts in total:
 as you can imagine the `marketplace` is the principal one.
 
 the `feeOracle` is used to update the fee that the marketplace takes for each succesful buy
-
 the fee can be updated indipendently by the marketplace and it can be done only by a predefined owner
 
 and finally the `oneShot` is a standard parametrized minting policy.
@@ -58,7 +57,6 @@ flowchart LR
     
     owner -. pub key hash param .-> feeOracle
 
-    feeOracle -. hash param .-> marketplace
     feeOracle --> |refUtxo| marketplace
     
     token -. policy param .-> marketplace
