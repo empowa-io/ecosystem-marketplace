@@ -71,7 +71,7 @@ only requirement is the owner signed
 
 CDDL:
 ```cddl
-rdmrClose = #6.123([ int ])
+rdmrUpdate = #6.123([ int ])
 ```
 
 requires the the owner signed.
@@ -87,7 +87,7 @@ checks that the output wiht the NFT sold is going back to the contract.
 
 CDDL:
 ```cddl
-rdmrClose = #6.121([])
+rdmrBuy = #6.121([])
 ```
 
 requires the feeOracle reference input to be included in the transaciton.
@@ -103,6 +103,11 @@ checks that the remaining amount goes to the seller (specified in the datum).
 
 ### `isInputFromScript`
 
+given an input extracts the address credentials and returns `true` if these are script credentials.
+
+used to prevent double spending attacks on the marketplace contract.
+
 
 ### `pvalueOf`
 
+given a `PValue`; a `PCurrencySymbol` and a `PTokenName` reutrns the amount (`0` if missing)
