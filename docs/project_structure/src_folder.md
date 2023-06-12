@@ -1,6 +1,6 @@
 ## Index
 
-- [.. (project_structure)](..)
+- [.. (project_structure)](./README.md)
 - [contracts](#contracts)
     - [`oneShot`](#oneshot)
     - [`feeOracle`](#feeoracle)
