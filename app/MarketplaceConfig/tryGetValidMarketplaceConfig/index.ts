@@ -80,5 +80,7 @@ export function tryGetValidMarketplaceConfig( path: string = "./marketplcae.conf
     ))
     json.feeNumerator = 25_000; // default
 
+    cfg.feeNumerator = json.feeNumerator;
+
     return cfg;
 }
