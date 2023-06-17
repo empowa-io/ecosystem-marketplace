@@ -1,0 +1,14 @@
+
+- Install deps
+- complete config file (`marketplace.config.json`)
+    - owner address
+    - payment address
+    - add token policy and name
+    - add environment folder (defaults to `./testnet`)
+    - add fee numerator as parameter
+- [ ] TODO rename `oneShot` to `feeOracleNftIdPolicy`
+    - [ ] rename `mintOneShot` to `mintFeeOracleNft`
+- [ ] TODO rename `foundFeeOracle` to `deployFeeOracle`
+- [ ] TODO add `updateFeeOracle`
+- [ ] TODO add `updateListing` transaction creation
+- [ ] TODO add `cancelListing` transaction creation

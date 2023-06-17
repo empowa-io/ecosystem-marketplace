@@ -2,8 +2,13 @@
 
 ## Index
 
+- [Install dependecies](#install-dependecies)
 - [project_overview](#project-overview)
 - [project_structure](./project_structure/README.md)
+
+## Install dependecies
+
+once you have this repo all the dependecies are already 
 
 ## Project overview
 
@@ -27,7 +32,7 @@ flowchart LR
     oneShot
     feeOracle
     marketplace
-    owner((owner))
+    marketplace_owner((marketplace_owner))
     anyone((anyone))
     token{{payment asset}}
 
@@ -36,11 +41,11 @@ flowchart LR
     oneShot -. policy param .-> feeOracle
 
     anyone -. utxo param .-> oneShot
-    owner -. pub key hash param .-> marketplace
+    marketplace_owner -. pub key hash param .-> marketplace
 
     oneShot -. policy param .-> marketplace
     
-    owner -. pub key hash param .-> feeOracle
+    marketplace_owner -. pub key hash param .-> feeOracle
 
     feeOracle --> |refUtxo| marketplace
     
@@ -56,7 +61,7 @@ the project consists of 3 contracts in total:
 as you can imagine the `marketplace` is the principal one.
 
 the `feeOracle` is used to update the fee that the marketplace takes for each succesful buy
-the fee can be updated indipendently by the marketplace and it can be done only by a predefined owner
+the fee can be updated indipendently by the marketplace and it can be done only by a predefined marketplace_owner
 
 and finally the `oneShot` is a standard parametrized minting policy.
 

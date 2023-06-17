@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc -p ./tsconfig.json && tsc-alias -p ./tsconfig.json",
+    "tokenNameToHex": "npm run --silent build && node dist/app/utils/getTokenNameHex.js",
     "marketplace:mintOneShot": "npm run build && node dist/app/mintOneShot.js",
     "marketplace:foundFeeOracle": "npm run build && node dist/app/foundFeeOracle.js",
     "marketplace:mintSomeTokens": "npm run build && node dist/app/mintSomeTokens.js",
@@ -17,6 +18,7 @@
     "@blockfrost/blockfrost-js": "^5.3.1",
     "@harmoniclabs/cardanocli-pluts": "^0.1.4-dev1",
     "@harmoniclabs/koios-pluts": "^0.1.4-dev1",
+    "@harmoniclabs/obj-utils": "^1.0.0",
     "@harmoniclabs/plu-ts": "^0.4.0-dev3",
     "@harmoniclabs/uint8array-utils": "^1.0.0"
   },

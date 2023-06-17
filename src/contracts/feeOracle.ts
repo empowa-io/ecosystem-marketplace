@@ -2,9 +2,9 @@ import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName,
 import { pvalueOf } from "../utils/pvalueOf";
 
 export const feeOracle = pfn([
-    PCurrencySymbol.type,
-    PTokenName.type,
-    PPubKeyHash.type,
+    PCurrencySymbol.type,   // fee oracle nft id
+    PTokenName.type,    // fee oracle nft id
+    PPubKeyHash.type,   // owner pub key hash
     data, // datum
     data, // redeemer
     PScriptContext.type
