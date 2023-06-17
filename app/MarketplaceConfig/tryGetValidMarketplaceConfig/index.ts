@@ -6,7 +6,7 @@ import { cli } from "../../providers/cli";
 import { Address, Hash28, PaymentCredentials } from "@harmoniclabs/plu-ts";
 import { fromHex } from "@harmoniclabs/uint8array-utils";
 
-export function tryGetValidMarketplaceConfig( path: string = "./marketplcae.config.json" ): MarketplaceConfig
+export function tryGetValidMarketplaceConfig( path: string = "./marketplace.config.json" ): MarketplaceConfig
 {
     if(!isValidPath( path )) throw new Error("invalid path for marketplace config");
 
