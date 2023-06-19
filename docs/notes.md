@@ -7,7 +7,7 @@
     - add environment folder (defaults to `${env}`)
     - add fee numerator as parameter
 - [x] rename `oneShot` to `feeOracleNftIdPolicy`
-- [ ] TODO rename `foundFeeOracle` to `deployFeeOracle`
+- [x] rename `foundFeeOracle` to `deployFeeOracle`
 - [ ] TODO add `updateFeeOracle`
 - [ ] TODO add `updateListing` transaction creation
 - [ ] TODO add `cancelListing` transaction creation

@@ -52,12 +52,19 @@ export function tryGetValidMarketplaceConfig( path: string = "./marketplace.conf
     cfg.signer.vkey = isValidPath( json.signer.vkeyPath ) ?
         cli.utils.readPublicKey( json.signer.vkeyPath ) :
         cfg.signer.skey.derivePublicKey();
-    cfg.signer.address = typeof json.signer.address === "string" ?
-        Address.fromString( json.signer.address ) :
-        new Address(
-            cfg.ownerAddress.network,
-            PaymentCredentials.pubKey( cfg.signer.vkey.hash )
+    cfg.signer.address =
+        // check if signer is also owner
+        cfg.ownerAddress.paymentCreds.hash.toString() === cfg.signer.vkey.toString() ? cfg.ownerAddress :
+        (
+            // check if address (not owner) is specified and use that
+            typeof json.signer.address === "string" ? Address.fromString( json.signer.address ) :
+            // build default address
+            new Address(
+                cfg.ownerAddress.network,
+                PaymentCredentials.pubKey( cfg.signer.vkey.hash )
+            )
         );
+    
 
     if(!(
         isObject( json.paymentAsset ) &&

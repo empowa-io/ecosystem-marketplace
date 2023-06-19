@@ -1,9 +1,8 @@
-import { Address, DataB, DataI, Hash28, PCurrencySymbol, PPubKeyHash, PTokenName, PaymentCredentials, TxBuilder, TxOutRef, Value, pData } from "@harmoniclabs/plu-ts";
+import { Address, DataB, Hash28, PCurrencySymbol, PPubKeyHash, PTokenName, PaymentCredentials, TxBuilder, TxOutRef, Value } from "@harmoniclabs/plu-ts";
 import { cli } from "./providers/cli";
 import { koios } from "./providers/koios";
 import { readFile, writeFile } from "fs/promises";
 import { tokenName } from "./constants";
-import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { makeMarketplace } from "../src/contracts/marketplace";
 import { tokensOne } from "../src/contracts/tokensOne";
@@ -25,9 +24,9 @@ async function main()
 
     const utxo = utxos[0];
 
-    if( utxo === undefined ) throw "bananas";
+    if( utxo === undefined ) throw new Error(`missing utxo at address ${addr}`);
 
-    const [ idStr, idxStr ] = (await readFile("./testnet/last_ref_used", { encoding: "utf-8" })).split("#");
+    const [ idStr, idxStr ] = (await readFile(`${env}/last_ref_used`, { encoding: "utf-8" })).split("#");
     const ref = new TxOutRef({
         id: idStr,
         index: parseInt( idxStr )
@@ -35,8 +34,8 @@ async function main()
     const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${ref}.policy`, { encoding: "utf-8" }) );
 
     const marketplace = makeMarketplace(
-        PCurrencySymbol.from( tokensOne.hash.toBuffer() ),
-        PTokenName.from( tokenName ),
+        PCurrencySymbol.from( cfg.paymentAsset.policy.toString() ),
+        PTokenName.from( cfg.paymentAsset.tokenName ),
         PPubKeyHash.from( publicKey.hash.toBuffer() ),
         PCurrencySymbol.from( nftPolicy.toBuffer() ),
         PTokenName.from( tokenName )
