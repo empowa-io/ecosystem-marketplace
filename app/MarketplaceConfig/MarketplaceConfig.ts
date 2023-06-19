@@ -2,7 +2,7 @@ import { Address, Hash28, PrivateKey, PublicKey } from "@harmoniclabs/plu-ts";
 
 export interface MarketplaceSigner {
     skey: PrivateKey,
-    vkey?: PublicKey,
+    vkey: PublicKey,
     address: Address,
 }
 

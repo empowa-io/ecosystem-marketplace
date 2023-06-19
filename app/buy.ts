@@ -6,6 +6,7 @@ import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { SaleAction } from "../src/contracts/marketplace";
 import Blockfrost from "@blockfrost/blockfrost-js";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 const API = new Blockfrost.BlockFrostAPI({
     projectId: "previewD7dYruaqECLZTKOzpDZfoDekk9hA78TR", // see: https://blockfrost.io
@@ -13,15 +14,19 @@ const API = new Blockfrost.BlockFrostAPI({
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const publicKey = cli.utils.readPublicKey("./secret_testnet/payment.vkey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
+
+    const env = cfg.envFolderPath;
+
+    const privateKey = cfg.signer.skey;
+    const publicKey = cfg.signer.vkey;
+    const addr = cfg.signer.address;
 
     console.log( publicKey.hash.toString() );
 
     const myUtxos = await koios.address.utxos( addr );
 
-    const marketplaceRefStr = await readFile("./testnet/marketplace.utxoRef", { encoding: "utf-8" });
+    const marketplaceRefStr = await readFile(`${env}/marketplace.utxoRef`, { encoding: "utf-8" });
     let [ idStr, idxStr ] = marketplaceRefStr.split("#");
 
     const marketplaceRef = new TxOutRef({
@@ -31,8 +36,8 @@ async function main()
 
     const _deployedMarketplaceTx = (await koios.tx.utxos( marketplaceRef.id ))[0]
 
-    const deployedMarketplaceUTxO = _deployedMarketplaceTx?.outputs
-        ?.find( out => 
+    const deployedMarketplaceUTxO = _deployedMarketplaceTx.outputs
+        .find( out => 
             out.utxoRef.id.toString() === idStr && 
             out.resolved.refScript
         );
@@ -44,14 +49,14 @@ async function main()
     const marketplaceUtxos = await koios.address.utxos( marketplaceAddr );
 
     const lastNftPolicyRef = await readFile("./testnet/last_ref_used", { encoding: "utf-8" });
-    const lastNftPolicy = new Hash28( await readFile(`./testnet/oneShot_${lastNftPolicyRef}.policy`, { encoding: "utf-8" }) );
+    const lastNftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${lastNftPolicyRef}.policy`, { encoding: "utf-8" }) );
 
     const spendingUtxo = marketplaceUtxos.find( u => u.resolved.value.get( lastNftPolicy, tokenName ) === 1n );
 
     if( spendingUtxo === undefined ) throw "papayas";
     
     const nftParamRefStr = await readFile("./testnet/feeOracle_nft_param", { encoding: "utf-8" });
-    const feeOracleNftPolicy = new Hash28( await readFile(`./testnet/oneShot_${nftParamRefStr}.policy`, { encoding: "utf-8" }) );
+    const feeOracleNftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${nftParamRefStr}.policy`, { encoding: "utf-8" }) );
 
     const feeOracleAddr = cli.utils.readAddress("./testnet/feeOracle.addr"); 
     const feeOracleUtxos = await koios.address.utxos( feeOracleAddr );
@@ -76,7 +81,7 @@ async function main()
 
     const collateral = myUtxos[0];
 
-    const fakeTokenPolicy = new Hash28( await readFile(`./testnet/fake.policy`, { encoding: "utf-8" }) );
+    const fakeTokenPolicy = new Hash28( await readFile(`${env}/fake.policy`, { encoding: "utf-8" }) );
 
     const nftSaleDatum = spendingUtxo.resolved.datum;
 

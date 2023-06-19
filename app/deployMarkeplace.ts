@@ -27,7 +27,7 @@ async function main()
         id: idStr,
         index: parseInt( idxStr )
     });
-    const nftPolicy = new Hash28( await readFile(`./testnet/oneShot_${ref}.policy`, { encoding: "utf-8" }) );
+    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${ref}.policy`, { encoding: "utf-8" }) );
 
     const marketplace = makeMarketplace(
         PCurrencySymbol.from( tokensOne.hash.toBuffer() ),
@@ -43,8 +43,8 @@ async function main()
     );
     const marketplaceFileName = `marketplace`;
 
-    await cli.utils.writeScript( marketplace,      `./testnet/${marketplaceFileName}.plutus.json` );
-    await cli.utils.writeAddress( marketplaceAddr, `./testnet/${marketplaceFileName}.addr` );
+    await cli.utils.writeScript( marketplace,      `${env}/${marketplaceFileName}.plutus.json` );
+    await cli.utils.writeAddress( marketplaceAddr, `${env}/${marketplaceFileName}.addr` );
 
     const txBuilder = new TxBuilder(
         "testnet",
@@ -69,7 +69,7 @@ async function main()
     await koios.tx.submit( tx );
 
     await writeFile(
-        `./testnet/${marketplaceFileName}.utxoRef`,
+        `${env}/${marketplaceFileName}.utxoRef`,
         `${tx.hash}#0`,
         { encoding: "utf-8" }
     );

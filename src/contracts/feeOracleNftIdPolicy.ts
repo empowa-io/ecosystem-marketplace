@@ -1,6 +1,9 @@
 import { PScriptContext, PTxOutRef, Script, Term, bool, bs, compile, data, makeRedeemerValidator, perror, pfn, pisEmpty, plet, pmatch } from "@harmoniclabs/plu-ts";
 
-export const oneShot = pfn([
+/**
+ * standard one-shot policy
+**/
+export const feeOracleNftIdPolicy = pfn([
     PTxOutRef.type,
     data,
     PScriptContext.type
@@ -40,17 +43,17 @@ export const oneShot = pfn([
     );
 });
 
-function makeUntypedOneShot( utxo: Term<typeof PTxOutRef> )
+function makeUntypedFeeOracleNftIdPolicy( utxo: Term<typeof PTxOutRef> )
 {
     return makeRedeemerValidator(
-        oneShot.$( utxo )
+        feeOracleNftIdPolicy.$( utxo )
     )
 };
 
-export function makeOneShot( utxo: Term<typeof PTxOutRef> )
+export function makeFeeOracleNftIdPolicy( utxo: Term<typeof PTxOutRef> )
 {
     return new Script(
         "PlutusScriptV2",
-        compile( makeUntypedOneShot( utxo ) )
+        compile( makeUntypedFeeOracleNftIdPolicy( utxo ) )
     );
 }

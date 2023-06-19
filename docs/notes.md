@@ -4,10 +4,9 @@
     - owner address
     - payment address
     - add token policy and name
-    - add environment folder (defaults to `./testnet`)
+    - add environment folder (defaults to `${env}`)
     - add fee numerator as parameter
-- [ ] TODO rename `oneShot` to `feeOracleNftIdPolicy`
-    - [ ] rename `mintOneShot` to `mintFeeOracleNft`
+- [x] rename `oneShot` to `feeOracleNftIdPolicy`
 - [ ] TODO rename `foundFeeOracle` to `deployFeeOracle`
 - [ ] TODO add `updateFeeOracle`
 - [ ] TODO add `updateListing` transaction creation

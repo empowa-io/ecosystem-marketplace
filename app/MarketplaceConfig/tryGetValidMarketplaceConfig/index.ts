@@ -26,9 +26,12 @@ export function tryGetValidMarketplaceConfig( path: string = "./marketplace.conf
         typeof json.envFolderPath === "string" &&
         isValidPath( json.envFolderPath )
     ))
-    throw new Error("invalid 'envFolderPath' for markeptlace configuration");
+    {
+        console.log("invalid 'envFolderPath' for markeptlace configuration; defaults to './testnet'");
+        json.envFolderPath = "./testnet"
+    }
 
-    cfg.envFolderPath = json.envFolderPath;
+    cfg.envFolderPath = json.envFolderPath + "/";
 
     if(!(
         typeof json.ownerAddress === "string"

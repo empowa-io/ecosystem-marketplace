@@ -23,7 +23,7 @@ async function main()
 
     console.log( utxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
 
-    const nftPolicy = new Hash28( await readFile(`./testnet/oneShot_${ref}.policy`, { encoding: "utf-8" }) );
+    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${ref}.policy`, { encoding: "utf-8" }) );
 
     const utxo = utxos.find( u => u.resolved.value.get( nftPolicy, tokenName ) === 1n )
 
@@ -40,8 +40,8 @@ async function main()
         PaymentCredentials.script( feeOracle.hash )
     );
 
-    await cli.utils.writeScript( feeOracle, `./testnet/feeOracl.plutus.json` );
-    await cli.utils.writeAddress( feeOracleAddr, `./testnet/feeOracle.addr` );
+    await cli.utils.writeScript( feeOracle, `${env}/feeOracl.plutus.json` );
+    await cli.utils.writeAddress( feeOracleAddr, `${env}/feeOracle.addr` );
 
     const txBuilder = new TxBuilder(
         "testnet",
@@ -86,7 +86,7 @@ async function main()
     await koios.tx.submit( tx );
 
     await writeFile(
-        `./testnet/feeOracle.utxoRef`,
+        `${env}/feeOracle.utxoRef`,
         `${tx.hash}#0`,
         { encoding: "utf-8" }
     );

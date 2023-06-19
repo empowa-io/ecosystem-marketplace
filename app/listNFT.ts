@@ -15,9 +15,9 @@ async function main()
     const marketplaceAddr = cli.utils.readAddress("./testnet/marketplace.addr");
     const feeOracleAddr = cli.utils.readAddress("./testnet/feeOracle.addr");
 
-    const oneShotRefParam = await readFile("./testnet/oneShot_refParam", { encoding: "utf-8" });
+    const feeOracleNftIdRefParam = await readFile("./testnet/feeOracleNftId_refParam", { encoding: "utf-8" });
 
-    const oraclePolicy = new Hash28( await readFile(`./testnet/oneShot_${oneShotRefParam}.policy`, { encoding: "utf8" }) );
+    const oraclePolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${feeOracleNftIdRefParam}.policy`, { encoding: "utf8" }) );
 
     const feeOracleUtxos = await koios.address.utxos( feeOracleAddr );
 
@@ -29,7 +29,7 @@ async function main()
 
     const nftPolicyRef = await readFile("./testnet/last_ref_used", { encoding: "utf-8" });
 
-    const nftPolicy = cli.utils.readScript(`./testnet/oneShot_${nftPolicyRef}.plutus.json`);
+    const nftPolicy = cli.utils.readScript(`${env}/feeOracleNftId_${nftPolicyRef}.plutus.json`);
 
     const lisingUtxo = utxos.find( u => u.resolved.value.get( nftPolicy.hash.toString(), tokenName ) === 1n )
 

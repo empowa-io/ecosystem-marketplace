@@ -1,16 +1,21 @@
 import { DataI, PTxOutRef, TxBuilder, Value, pData } from "@harmoniclabs/plu-ts";
-import { makeOneShot } from "../src/contracts/oneShot";
+import { makeFeeOracleNftIdPolicy } from "../src/contracts/feeOracleNftIdPolicy";
 import { cli } from "./providers/cli";
 import { koios } from "./providers/koios";
-import { withTestnetFolder } from "./utils/withTestnetFolder";
 import { writeFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
+import { withFolder } from "./utils/withFolder";
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
+
+    const env = cfg.envFolderPath;
+
+    const privateKey = cfg.signer.skey;
+    const addr = cfg.signer.address;
 
     const utxos = await koios.address.utxos( addr );
     console.log( utxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
@@ -18,16 +23,16 @@ async function main()
     const utxo = utxos[0];
     const ref = utxo.utxoRef;
 
-    const oneShot = makeOneShot( PTxOutRef.fromData( pData( ref.toData() ) ) );
+    const feeOracleNftIdPolicy = makeFeeOracleNftIdPolicy( PTxOutRef.fromData( pData( ref.toData() ) ) );
 
-    await withTestnetFolder();
+    await withFolder( env );
 
-    await cli.utils.writeScript( oneShot, `./testnet/oneShot_${ref}.plutus.json` );
+    await cli.utils.writeScript( feeOracleNftIdPolicy, `${env}/feeOracleNftId_${ref}.plutus.json` );
 
-    const policy = oneShot.hash;
+    const policy = feeOracleNftIdPolicy.hash;
 
-    await writeFile("./testnet/last_ref_used", ref.toString(), { encoding: "utf-8" });
-    await writeFile(`./testnet/oneShot_${ref}.policy`, oneShot.hash.toString(), { encoding: "utf-8" });
+    await writeFile(`${env}/last_ref_used`, ref.toString(), { encoding: "utf-8" });
+    await writeFile(`${env}/feeOracleNftId_${ref}.policy`, feeOracleNftIdPolicy.hash.toString(), { encoding: "utf-8" });
 
     const txBuilder = new TxBuilder(
         "testnet",
@@ -56,7 +61,7 @@ async function main()
             {
                 value: mintedValue,
                 script: {
-                    inline: oneShot,
+                    inline: feeOracleNftIdPolicy,
                     policyId: policy,
                     redeemer: new DataI( 0 )
                 }

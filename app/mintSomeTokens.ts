@@ -1,8 +1,6 @@
-import { DataI, PTxOutRef, TxBuilder, Value, pData } from "@harmoniclabs/plu-ts";
-import { makeOneShot } from "../src/contracts/oneShot";
+import { DataI, TxBuilder, Value } from "@harmoniclabs/plu-ts";
 import { cli } from "./providers/cli";
 import { koios } from "./providers/koios";
-import { withTestnetFolder } from "./utils/withTestnetFolder";
 import { writeFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
@@ -21,7 +19,7 @@ async function main()
     const policy = tokensOne.hash; 
 
     cli.utils.writeScript( tokensOne, "./testnet/fake.plutus.json" );
-    await writeFile(`./testnet/fake.policy`, policy.toString(), { encoding: "utf-8" });
+    await writeFile(`${env}/fake.policy`, policy.toString(), { encoding: "utf-8" });
 
     const txBuilder = new TxBuilder(
         "testnet",
