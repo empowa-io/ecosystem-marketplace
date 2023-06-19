@@ -5,14 +5,19 @@ import { readFile, writeFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { getProtocolParams } from "./utils/getProtocolParams";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const publicKey = cli.utils.readPublicKey("./secret_testnet/payment.vkey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
 
-    const [ idStr, idxStr ] = (await readFile("./testnet/last_ref_used", { encoding: "utf-8" })).split("#");
+    const env = cfg.envFolderPath;
+
+    const privateKey = cfg.signer.skey;
+    const publicKey = cfg.signer.vkey;
+    const addr = cfg.signer.address;
+
+    const [ idStr, idxStr ] = (await readFile(`${env}/last_ref_used`, { encoding: "utf-8" })).split("#");
 
     const ref = new TxOutRef({
         id: idStr,
@@ -40,11 +45,10 @@ async function main()
         PaymentCredentials.script( feeOracle.hash )
     );
 
-    await cli.utils.writeScript( feeOracle, `${env}/feeOracl.plutus.json` );
+    await cli.utils.writeScript( feeOracle, `${env}/feeOracle.plutus.json` );
     await cli.utils.writeAddress( feeOracleAddr, `${env}/feeOracle.addr` );
 
     const txBuilder = new TxBuilder(
-        "testnet",
         await getProtocolParams()
     );
 

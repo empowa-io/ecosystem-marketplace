@@ -5,11 +5,16 @@ import { writeFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { tokensOne } from "../src/contracts/tokensOne";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
+
+    const env = cfg.envFolderPath;
+
+    const privateKey = cfg.signer.skey;
+    const addr = cfg.signer.address;
 
     const utxos = await koios.address.utxos( addr );
     console.log( utxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
@@ -18,11 +23,10 @@ async function main()
 
     const policy = tokensOne.hash; 
 
-    cli.utils.writeScript( tokensOne, "./testnet/fake.plutus.json" );
+    cli.utils.writeScript( tokensOne, `${env}/fake.plutus.json` );
     await writeFile(`${env}/fake.policy`, policy.toString(), { encoding: "utf-8" });
 
     const txBuilder = new TxBuilder(
-        "testnet",
         await getProtocolParams()
     );
 

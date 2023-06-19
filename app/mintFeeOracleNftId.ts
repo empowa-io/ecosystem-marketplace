@@ -35,7 +35,6 @@ async function main()
     await writeFile(`${env}/feeOracleNftId_${ref}.policy`, feeOracleNftIdPolicy.hash.toString(), { encoding: "utf-8" });
 
     const txBuilder = new TxBuilder(
-        "testnet",
         await getProtocolParams()
     );
 

@@ -2,8 +2,15 @@ import { ProtocolParamters } from "@harmoniclabs/plu-ts";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import { koios } from "../providers/koios";
+import { tryGetMarketplaceConfig } from "./tryGetMarketplaceConfig";
+import { provider } from "../providers/provider";
+import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
 
-const ppPath = "./testnet/protocol_params.json";
+const cfg = tryGetMarketplaceConfig();
+
+const env = cfg.envFolderPath;
+
+const ppPath = `${env}/protocol_params.json`;
 
 export async function getProtocolParams(): Promise<ProtocolParamters>
 {
@@ -26,7 +33,7 @@ export async function getProtocolParams(): Promise<ProtocolParamters>
             }
         ) 
     }
-    const pps = await koios.epoch.protocolParams();
+    const pps = provider instanceof BlockfrostPluts ? await provider.getProtocolParameters() : await koios.epoch.protocolParams();
 
     await writeFile(
         ppPath,

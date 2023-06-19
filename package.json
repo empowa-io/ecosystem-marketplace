@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@blockfrost/blockfrost-js": "^5.3.1",
+    "@harmoniclabs/blockfrost-pluts": "^0.1.0",
     "@harmoniclabs/cardanocli-pluts": "^0.1.4-dev1",
     "@harmoniclabs/koios-pluts": "^0.1.4-dev1",
     "@harmoniclabs/obj-utils": "^1.0.0",

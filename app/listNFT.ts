@@ -5,17 +5,22 @@ import { readFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { NFTSale } from "../src/contracts/marketplace";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const publicKey = cli.utils.readPublicKey("./secret_testnet/payment.vkey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
 
-    const marketplaceAddr = cli.utils.readAddress("./testnet/marketplace.addr");
-    const feeOracleAddr = cli.utils.readAddress("./testnet/feeOracle.addr");
+    const env = cfg.envFolderPath;
 
-    const feeOracleNftIdRefParam = await readFile("./testnet/feeOracleNftId_refParam", { encoding: "utf-8" });
+    const privateKey = cfg.signer.skey;
+    const publicKey = cfg.signer.vkey;
+    const addr = cfg.signer.address;
+
+    const marketplaceAddr = cli.utils.readAddress(`${env}/marketplace.addr`);
+    const feeOracleAddr = cli.utils.readAddress(`${env}/feeOracle.addr`);
+
+    const feeOracleNftIdRefParam = await readFile(`${env}/feeOracleNftId_refParam`, { encoding: "utf-8" });
 
     const oraclePolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${feeOracleNftIdRefParam}.policy`, { encoding: "utf8" }) );
 
@@ -27,7 +32,7 @@ async function main()
 
     const utxos = await koios.address.utxos( addr );
 
-    const nftPolicyRef = await readFile("./testnet/last_ref_used", { encoding: "utf-8" });
+    const nftPolicyRef = await readFile(`${env}/last_ref_used`, { encoding: "utf-8" });
 
     const nftPolicy = cli.utils.readScript(`${env}/feeOracleNftId_${nftPolicyRef}.plutus.json`);
 
@@ -38,10 +43,7 @@ async function main()
 
     if( lisingUtxo === undefined ) throw "oranges";
 
-    const txBuilder = new TxBuilder(
-        "testnet",
-        await getProtocolParams()
-    );
+    const txBuilder = new TxBuilder( await getProtocolParams() );
 
     const tx = txBuilder.buildSync({
         inputs: [{ utxo: lisingUtxo }],

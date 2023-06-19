@@ -7,12 +7,17 @@ import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { makeMarketplace } from "../src/contracts/marketplace";
 import { tokensOne } from "../src/contracts/tokensOne";
+import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 async function main()
 {
-    const privateKey = cli.utils.readPrivateKey("./secret_testnet/payment.skey");
-    const publicKey = cli.utils.readPublicKey("./secret_testnet/payment.vkey");
-    const addr = cli.utils.readAddress("./secret_testnet/payment.addr");
+    const cfg = tryGetMarketplaceConfig();
+
+    const env = cfg.envFolderPath;
+
+    const privateKey = cfg.signer.skey;
+    const publicKey = cfg.signer.vkey;
+    const addr = cfg.signer.address;
 
     const utxos = await koios.address.utxos( addr );
 
@@ -47,7 +52,6 @@ async function main()
     await cli.utils.writeAddress( marketplaceAddr, `${env}/${marketplaceFileName}.addr` );
 
     const txBuilder = new TxBuilder(
-        "testnet",
         await getProtocolParams()
     );
 

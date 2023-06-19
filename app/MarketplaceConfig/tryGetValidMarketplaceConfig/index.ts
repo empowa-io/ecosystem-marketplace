@@ -85,5 +85,10 @@ export function tryGetValidMarketplaceConfig( path: string = "./marketplace.conf
 
     cfg.feeNumerator = json.feeNumerator;
 
+    cfg.blockfrostProjectId =
+    ( typeof json.blockfrostProjectId === "string" ) ?
+        json.blockfrostProjectId :
+        undefined;
+
     return cfg;
 }

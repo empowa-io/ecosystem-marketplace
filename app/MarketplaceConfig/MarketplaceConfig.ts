@@ -14,5 +14,6 @@ export interface MarketplaceConfig {
         policy: Hash28 | "",
         tokenName: Uint8Array
     },
-    feeNumerator: number
+    feeNumerator: number,
+    blockfrostProjectId: string | undefined
 };

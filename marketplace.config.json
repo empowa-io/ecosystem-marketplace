@@ -75,6 +75,14 @@
         "I want a fee of 2.5% so I do",
         "2.5 * 10_000 = 25_000"
     ],
-    "feeNumerator": 25000
+    "feeNumerator": 25000,
+
+
+    "blockfrostProjectId_comment": [
+        "'blockfrostProjectId' is the API key for blockfrost;",
+        "if specified blockfrost will be used for queries and tx submission",
+        "otherwhise leave anything that is not a string will default to koios"
+    ],
+    "blockfrostProjectId": null
     
 }

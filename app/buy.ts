@@ -75,7 +75,6 @@ async function main()
         JSON.stringify( pp, (k,v) => typeof v === "bigint" ? v.toString() : v, 2 )
     );
     const txBuilder = new TxBuilder(
-        "testnet",
         pp
     );
 
