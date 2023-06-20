@@ -45,10 +45,9 @@ async function main()
         "testnet",
         PaymentCredentials.script( marketplace.hash )
     );
-    const marketplaceFileName = `marketplace`;
 
-    await cli.utils.writeScript( marketplace,      `${env}/${marketplaceFileName}.plutus.json` );
-    await cli.utils.writeAddress( marketplaceAddr, `${env}/${marketplaceFileName}.addr` );
+    await cli.utils.writeScript( marketplace,      `${env}/marketplace.plutus.json` );
+    await cli.utils.writeAddress( marketplaceAddr, `${env}/marketplace.addr` );
 
     const txBuilder = new TxBuilder(
         await getProtocolParams()
@@ -72,7 +71,7 @@ async function main()
     await koios.tx.submit( tx );
 
     await writeFile(
-        `${env}/${marketplaceFileName}.utxoRef`,
+        `${env}/marketplace.utxoRef`,
         `${tx.hash}#0`,
         { encoding: "utf-8" }
     );

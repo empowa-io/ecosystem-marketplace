@@ -9,5 +9,5 @@
 - [x] rename `oneShot` to `feeOracleNftIdPolicy`
 - [x] rename `foundFeeOracle` to `deployFeeOracle`
 - [x] add `updateFeeOracle`
-- [ ] TODO add `updateListing` transaction creation
-- [ ] TODO add `cancelListing` transaction creation
+- [x] add `updateListing`
+- [x] add `cancelListing`

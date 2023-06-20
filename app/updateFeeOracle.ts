@@ -5,12 +5,15 @@ import { readFile } from "fs/promises";
 import { koios } from "./providers/koios";
 import { tokenName } from "./constants";
 
-export async function getFeeUpdateTx( newFee: number, ownerPkh: Hash28, collateral: UTxO ): Promise<Tx>
+export async function getFeeUpdateTx(
+    txBuilder: TxBuilder,
+    newFee: number,
+    ownerPkh: Hash28,
+    collateral: UTxO
+): Promise<Tx>
 {
     const env = tryGetMarketplaceConfig().envFolderPath;
-
-    const txBuilder = new TxBuilder( await getProtocolParams() );
-    
+        
     const [ foIdStr, foIdxStr ] = (await readFile(`${env}/feeOracle.utxoRef`, { encoding: "utf-8" })).split("#");
 
     const feeOracleRef = new TxOutRef({
