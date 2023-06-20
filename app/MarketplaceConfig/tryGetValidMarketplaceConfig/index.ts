@@ -5,8 +5,9 @@ import { isObject } from "@harmoniclabs/obj-utils";
 import { cli } from "../../providers/cli";
 import { Address, Hash28, PaymentCredentials } from "@harmoniclabs/plu-ts";
 import { fromHex } from "@harmoniclabs/uint8array-utils";
+import { commander } from "../../utils/commander";
 
-export function tryGetValidMarketplaceConfig( path: string = "./marketplace.config.json" ): MarketplaceConfig
+export function tryGetValidMarketplaceConfig( path: string = commander.opts().config ?? "./marketplace.config.json" ): MarketplaceConfig
 {
     if(!isValidPath( path )) throw new Error("invalid path for marketplace config");
 

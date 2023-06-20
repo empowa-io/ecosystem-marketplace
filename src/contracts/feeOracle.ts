@@ -1,12 +1,12 @@
-import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, PTxOut, PTxOutRef, Script, Term, addUtilityForType, asData, bool, compile, data, int, makeValidator, pIntToData, perror, pfn, plet, pmatch, punBData, punIData } from "@harmoniclabs/plu-ts";
+import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, PTxOut, PTxOutRef, Script, Term, addUtilityForType, bool, compile, data, makeValidator, pIntToData, perror, pfn, plet, pmatch, punBData, punIData } from "@harmoniclabs/plu-ts";
 import { pvalueOf } from "../utils/pvalueOf";
 
 export const feeOracle = pfn([
     PCurrencySymbol.type,   // fee oracle nft id
     PTokenName.type,    // fee oracle nft id
     PPubKeyHash.type,   // owner pub key hash
-    data, // datum
-    data, // redeemer
+    data, // datum (int)
+    data, // redeemer (int)
     PScriptContext.type
 ],  bool)
 ((
