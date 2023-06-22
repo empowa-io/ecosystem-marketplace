@@ -43,7 +43,9 @@ export async function getProtocolParams(): Promise<ProtocolParamters>
         return ppsFromJsonString( await readFile( ppPath, { encoding: "utf-8"} ) );
     }
     
-    _pps = provider instanceof BlockfrostPluts ? await provider.getProtocolParameters() : await koios.epoch.protocolParams();
+    _pps = provider instanceof BlockfrostPluts ?
+        await provider.getProtocolParameters() :
+        await koios.epoch.protocolParams();
 
     await writeFile(
         ppPath,

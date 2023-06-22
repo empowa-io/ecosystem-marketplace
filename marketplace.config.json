@@ -1,4 +1,12 @@
 {
+    "network_comment": [
+        "either:",
+        "mainnet",
+        "preprod",
+        "preview"
+    ],
+    "network": "preprod",
+
     "envFolderPath_comment": [
         "folder that will be used by the various sub commands to generate files"
     ],
@@ -15,7 +23,7 @@
         "if the address is not specified the private key will be used to generate the address with _only payment credentials_",
         "if the account you intend to use has also staking part it is required to specify the full address"
     ],
-    "singer": {
+    "signer": {
         "skeyPath": "./secret_testnet/payment.skey",
         "vkeyPath": null,
         "address": null 
@@ -76,7 +84,6 @@
         "2.5 * 10_000 = 25_000"
     ],
     "feeNumerator": 25000,
-
 
     "blockfrostProjectId_comment": [
         "'blockfrostProjectId' is the API key for blockfrost;",

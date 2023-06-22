@@ -1,6 +1,5 @@
 
 import { Address, DataConstr, DataI, Tx, TxBuilder, TxOutRef, UTxO } from "@harmoniclabs/plu-ts";
-import { NFTSale, SaleAction } from "../src/contracts/marketplace";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 import { readFile } from "fs/promises";
 import { koios } from "./providers/koios";
@@ -8,20 +7,15 @@ import { koios } from "./providers/koios";
 export async function getUpdateListingTx(
     txBuilder: TxBuilder,
     newPrice: number | bigint,
+    /**
+     * 
+    **/
+    marketplaceRef: TxOutRef,
     listingUtxo: UTxO,
     collateral: UTxO,
     ownerAddress: Address
 ): Promise<Tx>
 {
-    const env = tryGetMarketplaceConfig().envFolderPath;
-
-    const [ mIdStr, mIdxStr ] = (await readFile(`${env}/marketplace.utxoRef`, { encoding: "utf-8" })).split("#");
-
-    const marketplaceRef = new TxOutRef({
-        id: mIdStr,
-        index: parseInt( mIdxStr )
-    });
-
     const marketplaceAddr = listingUtxo.resolved.address;
 
     const utxos = await koios.address.utxos( marketplaceAddr );
@@ -35,7 +29,6 @@ export async function getUpdateListingTx(
     if(!( initialDatum instanceof DataConstr )) throw new Error("listing utxo datum is not inline");
 
     const initialDatumFields = initialDatum.fields;
-
 
     return await txBuilder.build({
         inputs: [

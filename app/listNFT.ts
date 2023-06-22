@@ -20,9 +20,9 @@ async function main()
     const marketplaceAddr = cli.utils.readAddress(`${env}/marketplace.addr`);
     const feeOracleAddr = cli.utils.readAddress(`${env}/feeOracle.addr`);
 
-    const feeOracleNftIdRefParam = await readFile(`${env}/feeOracleNftId_refParam`, { encoding: "utf-8" });
+    const feeOracleNftRefParam = await readFile(`${env}/feeOracleNft_refParam`, { encoding: "utf-8" });
 
-    const oraclePolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${feeOracleNftIdRefParam}.policy`, { encoding: "utf8" }) );
+    const oraclePolicy = new Hash28( await readFile(`${env}/feeOracleNft_${feeOracleNftRefParam}.policy`, { encoding: "utf8" }) );
 
     const feeOracleUtxos = await koios.address.utxos( feeOracleAddr );
 
@@ -34,7 +34,7 @@ async function main()
 
     const nftPolicyRef = await readFile(`${env}/last_ref_used`, { encoding: "utf-8" });
 
-    const nftPolicy = cli.utils.readScript(`${env}/feeOracleNftId_${nftPolicyRef}.plutus.json`);
+    const nftPolicy = cli.utils.readScript(`${env}/feeOracleNft_${nftPolicyRef}.plutus.json`);
 
     const lisingUtxo = utxos.find( u => u.resolved.value.get( nftPolicy.hash.toString(), tokenName ) === 1n )
 

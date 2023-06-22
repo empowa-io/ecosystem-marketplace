@@ -31,7 +31,7 @@ async function main()
         id: idStr,
         index: parseInt( idxStr )
     });
-    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${ref}.policy`, { encoding: "utf-8" }) );
+    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${ref}.policy`, { encoding: "utf-8" }) );
 
     const marketplace = makeMarketplace(
         PCurrencySymbol.from( cfg.paymentAsset.policy.toString() ),

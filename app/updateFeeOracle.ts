@@ -36,7 +36,7 @@ export async function getFeeUpdateTx(
 
     console.log( feeOracleUtxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
 
-    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${ref}.policy`, { encoding: "utf-8" }) );
+    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${ref}.policy`, { encoding: "utf-8" }) );
 
     const feeOracleInput = feeOracleUtxos.find( u => u.resolved.value.get( nftPolicy, tokenName ) === 1n )
 

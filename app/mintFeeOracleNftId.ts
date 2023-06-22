@@ -1,5 +1,5 @@
 import { DataI, PTxOutRef, TxBuilder, Value, pData } from "@harmoniclabs/plu-ts";
-import { makeFeeOracleNftIdPolicy } from "../src/contracts/feeOracleNftIdPolicy";
+import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy";
 import { cli } from "./providers/cli";
 import { koios } from "./providers/koios";
 import { writeFile } from "fs/promises";
@@ -23,16 +23,16 @@ async function main()
     const utxo = utxos[0];
     const ref = utxo.utxoRef;
 
-    const feeOracleNftIdPolicy = makeFeeOracleNftIdPolicy( PTxOutRef.fromData( pData( ref.toData() ) ) );
+    const feeOracleNftPolicy = makeFeeOracleNftPolicy( PTxOutRef.fromData( pData( ref.toData() ) ) );
 
     await withFolder( env );
 
-    await cli.utils.writeScript( feeOracleNftIdPolicy, `${env}/feeOracleNftId_${ref}.plutus.json` );
+    await cli.utils.writeScript( feeOracleNftPolicy, `${env}/feeOracleNft_${ref}.plutus.json` );
 
-    const policy = feeOracleNftIdPolicy.hash;
+    const policy = feeOracleNftPolicy.hash;
 
     await writeFile(`${env}/last_ref_used`, ref.toString(), { encoding: "utf-8" });
-    await writeFile(`${env}/feeOracleNftId_${ref}.policy`, feeOracleNftIdPolicy.hash.toString(), { encoding: "utf-8" });
+    await writeFile(`${env}/feeOracleNft_${ref}.policy`, feeOracleNftPolicy.hash.toString(), { encoding: "utf-8" });
 
     const txBuilder = new TxBuilder(
         await getProtocolParams()
@@ -60,7 +60,7 @@ async function main()
             {
                 value: mintedValue,
                 script: {
-                    inline: feeOracleNftIdPolicy,
+                    inline: feeOracleNftPolicy,
                     policyId: policy,
                     redeemer: new DataI( 0 )
                 }

@@ -3,7 +3,7 @@ import { PScriptContext, PTxOutRef, Script, Term, bool, bs, compile, data, makeR
 /**
  * standard one-shot policy
 **/
-export const feeOracleNftIdPolicy = pfn([
+export const feeOracleNftPolicy = pfn([
     PTxOutRef.type,
     data,
     PScriptContext.type
@@ -43,17 +43,17 @@ export const feeOracleNftIdPolicy = pfn([
     );
 });
 
-function makeUntypedFeeOracleNftIdPolicy( utxo: Term<typeof PTxOutRef> )
+function makeUntypedFeeOracleNftPolicy( utxo: Term<typeof PTxOutRef> )
 {
     return makeRedeemerValidator(
-        feeOracleNftIdPolicy.$( utxo )
+        feeOracleNftPolicy.$( utxo )
     )
 };
 
-export function makeFeeOracleNftIdPolicy( utxo: Term<typeof PTxOutRef> )
+export function makeFeeOracleNftPolicy( utxo: Term<typeof PTxOutRef> )
 {
     return new Script(
         "PlutusScriptV2",
-        compile( makeUntypedFeeOracleNftIdPolicy( utxo ) )
+        compile( makeUntypedFeeOracleNftPolicy( utxo ) )
     );
 }

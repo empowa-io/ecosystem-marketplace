@@ -49,14 +49,14 @@ async function main()
     const marketplaceUtxos = await koios.address.utxos( marketplaceAddr );
 
     const lastNftPolicyRef = await readFile("./testnet/last_ref_used", { encoding: "utf-8" });
-    const lastNftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${lastNftPolicyRef}.policy`, { encoding: "utf-8" }) );
+    const lastNftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${lastNftPolicyRef}.policy`, { encoding: "utf-8" }) );
 
     const spendingUtxo = marketplaceUtxos.find( u => u.resolved.value.get( lastNftPolicy, tokenName ) === 1n );
 
     if( spendingUtxo === undefined ) throw "papayas";
     
     const nftParamRefStr = await readFile("./testnet/feeOracle_nft_param", { encoding: "utf-8" });
-    const feeOracleNftPolicy = new Hash28( await readFile(`${env}/feeOracleNftId_${nftParamRefStr}.policy`, { encoding: "utf-8" }) );
+    const feeOracleNftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${nftParamRefStr}.policy`, { encoding: "utf-8" }) );
 
     const feeOracleAddr = cli.utils.readAddress("./testnet/feeOracle.addr"); 
     const feeOracleUtxos = await koios.address.utxos( feeOracleAddr );
