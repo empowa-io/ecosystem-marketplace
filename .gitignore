@@ -3,3 +3,4 @@ dist/
 secret_testnet/
 secrets/
 marketplace.config.local.json
+testnet/
