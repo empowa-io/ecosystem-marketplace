@@ -1,13 +1,14 @@
 import { existsSync, readFileSync } from "fs";
+import { mkdir } from "fs/promises";
 import { isValidPath } from "../../utils/isValidPath";
 import { MarketplaceConfig } from "../MarketplaceConfig";
 import { isObject } from "@harmoniclabs/obj-utils";
 import { cli } from "../../providers/cli";
 import { Address, Hash28, PaymentCredentials } from "@harmoniclabs/plu-ts";
 import { fromHex } from "@harmoniclabs/uint8array-utils";
-import { commander } from "../../utils/commander";
+import { getConfigPath } from "../getConfigPath";
 
-export function tryGetValidMarketplaceConfig( path: string = commander.opts().config ?? "./marketplace.config.json" ): MarketplaceConfig
+export function tryGetValidMarketplaceConfig( path: string = getConfigPath() ): MarketplaceConfig
 {
     if(!isValidPath( path )) throw new Error("invalid path for marketplace config");
 
@@ -20,7 +21,7 @@ export function tryGetValidMarketplaceConfig( path: string = commander.opts().co
 
     const json = JSON.parse( readFileSync( path, { encoding: "utf-8" } ) );
 
-    if( isObject( json ) )
+    if( !isObject( json ) )
     throw new Error("invalid JSON for markeptlace configuration")
 
     if(!(
@@ -33,6 +34,11 @@ export function tryGetValidMarketplaceConfig( path: string = commander.opts().co
     }
 
     cfg.envFolderPath = json.envFolderPath + "/";
+
+    if( !existsSync( cfg.envFolderPath ) )
+    {
+        mkdir( cfg.envFolderPath );
+    }
 
     if(!(
         typeof json.ownerAddress === "string"

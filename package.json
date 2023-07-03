@@ -9,7 +9,7 @@
     "tokenNameToHex": "npm run --silent build && node dist/app/utils/getTokenNameHex.js",
     "marketplace:mintOneShot": "npm run build && node dist/app/mintOneShot.js",
     "marketplace:foundFeeOracle": "npm run build && node dist/app/foundFeeOracle.js",
-    "marketplace:mintSomeTokens": "npm run build && node dist/app/mintSomeTokens.js",
+    "marketplace:mintFungibleTokens": "npm run build && node dist/app/mintFungibleTokens.js",
     "marketplace:deployMarketplace": "npm run build && node dist/app/deployMarkeplace.js",
     "marketplace:listNFT": "npm run build && node dist/app/listNFT.js",
     "marketplace:buy": "npm run build && node dist/app/buy.js"
@@ -20,7 +20,7 @@
     "@harmoniclabs/cardanocli-pluts": "^0.1.4-dev1",
     "@harmoniclabs/koios-pluts": "^0.1.4-dev1",
     "@harmoniclabs/obj-utils": "^1.0.0",
-    "@harmoniclabs/plu-ts": "^0.4.0-dev3",
+    "@harmoniclabs/plu-ts": "^0.4.2",
     "@harmoniclabs/uint8array-utils": "^1.0.0"
   },
   "devDependencies": {

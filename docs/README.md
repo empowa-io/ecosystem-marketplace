@@ -32,19 +32,18 @@ flowchart LR
     oneShot
     feeOracle
     marketplace
-    marketplace_owner((marketplace_owner))
+    marketplace_owner((marketplace\nowner))
     anyone((anyone))
     token{{payment asset}}
 
+    anyone -. utxo param .-> oneShot
 
     oneShot ==> |mints NFT identifyer| feeOracle
     oneShot -. policy param .-> feeOracle
 
-    anyone -. utxo param .-> oneShot
-    marketplace_owner -. pub key hash param .-> marketplace
-
     oneShot -. policy param .-> marketplace
     
+    marketplace_owner -. pub key hash param .-> marketplace
     marketplace_owner -. pub key hash param .-> feeOracle
 
     feeOracle --> |refUtxo| marketplace

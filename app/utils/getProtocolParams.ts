@@ -38,7 +38,7 @@ export async function getProtocolParams(): Promise<ProtocolParamters>
 {
     if( _pps ) return _pps;
     
-    if( !existsSync( ppPath ) )
+    if( existsSync( ppPath ) )
     {
         return ppsFromJsonString( await readFile( ppPath, { encoding: "utf-8"} ) );
     }

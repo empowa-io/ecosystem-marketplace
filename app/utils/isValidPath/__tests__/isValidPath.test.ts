@@ -78,3 +78,10 @@ test("windows", () => {
     expect( isValidPath( "..\\hello.test.js" ) ).toBe( true );
     
 });
+
+test("_", () => {
+
+    expect( isValidPath( "./hello_there.test.js" ) ).toBe( true );
+    expect( isValidPath( "./secret_testnet/payment1.skey" ) ).toBe( true );
+
+})

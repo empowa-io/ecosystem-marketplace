@@ -1,9 +1,10 @@
 import { MarketplaceConfig, tryGetValidMarketplaceConfig } from "../MarketplaceConfig";
+import { getConfigPath } from "../MarketplaceConfig/getConfigPath";
 
 
 let cached_cfg: MarketplaceConfig | undefined = undefined;
 
-export function tryGetMarketplaceConfig( path: string = "./marketplace.config.json" ): MarketplaceConfig
+export function tryGetMarketplaceConfig( path: string = getConfigPath() ): MarketplaceConfig
 {
     if( cached_cfg ) return cached_cfg;
     
