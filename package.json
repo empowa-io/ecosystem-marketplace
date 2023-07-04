@@ -22,7 +22,7 @@
     "@harmoniclabs/cardanocli-pluts": "^0.1.4-dev1",
     "@harmoniclabs/koios-pluts": "^0.1.4-dev1",
     "@harmoniclabs/obj-utils": "^1.0.0",
-    "@harmoniclabs/plu-ts": "^0.4.2",
+    "@harmoniclabs/plu-ts": "^0.4.3",
     "@harmoniclabs/uint8array-utils": "^1.0.0"
   },
   "devDependencies": {
