@@ -22,7 +22,17 @@ export function tryGetValidMarketplaceConfig( path: string = getConfigPath() ): 
     const json = JSON.parse( readFileSync( path, { encoding: "utf-8" } ) );
 
     if( !isObject( json ) )
-    throw new Error("invalid JSON for markeptlace configuration")
+    throw new Error("invalid JSON for markeptlace configuration");
+
+    cfg.network = json.network;
+
+    if(!(
+        cfg.network === "mainnet" ||
+        cfg.network === "preprod" ||
+        cfg.network === "preview" ||
+        cfg.network === "testnet"
+    ))
+    throw new Error("invalid network specified in config file; network was: " + cfg.network );
 
     if(!(
         typeof json.envFolderPath === "string" &&

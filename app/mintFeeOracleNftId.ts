@@ -71,8 +71,10 @@ async function main()
 
     tx.signWith( privateKey );
 
-    await koios.tx.submit( tx );
+    const hash = await koios.tx.submit( tx );
 
+    console.log( hash.toString() );
+    
     await koios.tx.waitConfirmed( tx.hash, 40_000, undefined, true );
 
 }

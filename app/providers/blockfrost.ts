@@ -1,5 +1,4 @@
 import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
-import { BlockfrostOptions } from "@harmoniclabs/blockfrost-pluts/dist/BlockfrostPluts/BlockfrostOptions";
 import { tryGetMarketplaceConfig } from "../utils/tryGetMarketplaceConfig";
 
 const projectId = tryGetMarketplaceConfig().blockfrostProjectId;

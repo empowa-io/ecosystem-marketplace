@@ -7,6 +7,7 @@ export interface MarketplaceSigner {
 }
 
 export interface MarketplaceConfig {
+    network: "mainnet" | "testnet" | "preprod" | "preview",
     envFolderPath: string,
     signer: MarketplaceSigner,
     ownerAddress: Address,
