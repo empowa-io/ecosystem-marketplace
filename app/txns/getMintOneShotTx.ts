@@ -1,4 +1,4 @@
-import { Address, DataI, PTxOutRef, Tx, TxBuilder, UTxO, Value, pData } from "@harmoniclabs/plu-ts";
+import { Address, DataI, PTxOutRef, Script, ScriptType, Tx, TxBuilder, UTxO, Value, pData } from "@harmoniclabs/plu-ts";
 import { writeFile } from "fs/promises";
 import { env } from "process";
 import { makeFeeOracleNftPolicy } from "../../src/contracts/feeOracleNftIdPolicy";
@@ -11,7 +11,10 @@ export async function getMintOneShotTx(
     txBuilder: TxBuilder,
     utxoToSpend: UTxO,
     returnAddress: Address
-) : Promise<Tx>
+) : Promise<{
+    nftPolicySource: Script<"PlutusScriptV2">
+    tx: Tx
+}>
 {
     const env = tryGetMarketplaceConfig().envFolderPath;
 
@@ -39,26 +42,29 @@ export async function getMintOneShotTx(
         )
     ]);
 
-    return txBuilder.buildSync({
-        inputs: [{ utxo }],
-        collaterals: [ utxo ],
-        collateralReturn: {
-            address: addr,
-            value: Value.sub(
-                utxo.resolved.value,
-                Value.lovelaces( 5_000_000 )
-            )
-        },
-        mints: [
-            {
-                value: mintedValue,
-                script: {
-                    inline: feeOracleNftPolicy,
-                    policyId: policy,
-                    redeemer: new DataI( 0 )
+    return {
+        tx: txBuilder.buildSync({
+            inputs: [{ utxo }],
+            collaterals: [ utxo ],
+            collateralReturn: {
+                address: addr,
+                value: Value.sub(
+                    utxo.resolved.value,
+                    Value.lovelaces( 5_000_000 )
+                )
+            },
+            mints: [
+                {
+                    value: mintedValue,
+                    script: {
+                        inline: feeOracleNftPolicy,
+                        policyId: policy,
+                        redeemer: new DataI( 0 )
+                    }
                 }
-            }
-        ],
-        changeAddress: addr
-    });
+            ],
+            changeAddress: addr
+        }),
+        nftPolicySource: feeOracleNftPolicy 
+    };
 }

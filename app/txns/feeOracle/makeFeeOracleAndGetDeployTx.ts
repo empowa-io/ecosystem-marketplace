@@ -13,7 +13,8 @@ export async function makeFeeOracleAndGetDeployTx(
     publicKey: PublicKey
 ): Promise<Tx>
 {
-    const env = tryGetMarketplaceConfig().envFolderPath;
+    const cfg = tryGetMarketplaceConfig();
+    const env = cfg.envFolderPath;
     
     const feeOracle = makeFeeOracle(
         PCurrencySymbol.from( nftPolicy.toBuffer() ),
@@ -22,7 +23,7 @@ export async function makeFeeOracleAndGetDeployTx(
     );
 
     const feeOracleAddr = new Address(
-        "testnet",
+        cfg.network === "mainnet" ? "mainnet" : "testnet",
         PaymentCredentials.script( feeOracle.hash )
     );
 

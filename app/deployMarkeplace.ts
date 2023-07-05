@@ -7,6 +7,8 @@ import { getProtocolParams } from "./utils/getProtocolParams";
 import { makeMarketplace } from "../src/contracts/marketplace";
 import { tokensOne } from "../src/contracts/tokensOne";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
+import { getDeployMarketplaceTx } from "./txns/marketplace/getDeployMarketplaceTx";
+import { makeMarketplaceAndGetDeployTx } from "./txns/marketplace/makeMarketplaceAndGetDeployTx";
 
 async function main()
 {
@@ -26,45 +28,23 @@ async function main()
 
     if( utxo === undefined ) throw new Error(`missing utxo at address ${addr}`);
 
+    const txBuilder = new TxBuilder(
+        await getProtocolParams()
+    );
+
     const [ idStr, idxStr ] = (await readFile(`${env}/last_ref_used`, { encoding: "utf-8" })).split("#");
     const ref = new TxOutRef({
         id: idStr,
         index: parseInt( idxStr )
     });
-    const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${ref}.policy`, { encoding: "utf-8" }) );
 
-    const marketplace = makeMarketplace(
-        PCurrencySymbol.from( cfg.paymentAsset.policy.toString() ),
-        PTokenName.from( cfg.paymentAsset.tokenName ),
-        PPubKeyHash.from( publicKey.hash.toBuffer() ),
-        PCurrencySymbol.from( nftPolicy.toBuffer() ),
-        PTokenName.from( tokenName )
+    const tx = await makeMarketplaceAndGetDeployTx(
+        txBuilder,
+        utxo,
+        addr,
+        ref,
+        publicKey
     );
-
-    const marketplaceAddr = new Address(
-        "testnet",
-        PaymentCredentials.script( marketplace.hash )
-    );
-
-    await cli.utils.writeScript( marketplace,      `${env}/marketplace.plutus.json` );
-    await cli.utils.writeAddress( marketplaceAddr, `${env}/marketplace.addr` );
-
-    const txBuilder = new TxBuilder(
-        await getProtocolParams()
-    );
-
-    const tx = txBuilder.buildSync({
-        inputs: [{ utxo }],
-        outputs: [
-            {
-                address: marketplaceAddr,
-                value: Value.lovelaces( 10_000_000 ),
-                datum: new DataB(""), // invalid datum for the contract; always fails
-                refScript: marketplace
-            }
-        ],
-        changeAddress: addr
-    });
 
     tx.signWith( privateKey );
 

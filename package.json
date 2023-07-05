@@ -7,6 +7,8 @@
     "test": "jest",
     "build": "tsc -p ./tsconfig.json && tsc-alias -p ./tsconfig.json",
     "tokenNameToHex": "npm run --silent build && node dist/app/utils/getTokenNameHex.js",
+    "marketplace:deployAll": "npm run build && node dist/app/deployAll.js",
+    "marketplace:deploy": "npm run marketplace:deployAll",
     "marketplace:mintFeeOracleNftId": "npm run build && node dist/app/mintFeeOracleNftId.js",
     "marketplace:mintOneShot": "npm run marketplace:mintFeeOracleNftId",
     "marketplace:deployFeeOracle": "npm run build && node dist/app/deployFeeOracle.js",

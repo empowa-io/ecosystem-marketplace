@@ -29,7 +29,7 @@ async function main()
         txBuilder,
         utxo,
         addr
-    );
+    ).then( ({ tx }) => tx );
 
     tx.signWith( privateKey );
 
