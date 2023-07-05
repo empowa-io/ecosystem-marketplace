@@ -6,6 +6,8 @@ import { tokenName } from "./constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
+import { getDeployFeeOracleTx } from "./txns/feeOracle/getDeployFeeOracleTx";
+import { makeFeeOracleAndGetDeployTx } from "./txns/feeOracle/makeFeeOracleAndGetDeployTx";
 
 async function main()
 {
@@ -34,56 +36,17 @@ async function main()
 
     if( utxo === undefined ) throw "bananas";
 
-    const feeOracle = makeFeeOracle(
-        PCurrencySymbol.from( nftPolicy.toBuffer() ),
-        PTokenName.from( tokenName ),
-        PPubKeyHash.from( publicKey.hash.toBuffer() )
-    );
-
-    const feeOracleAddr = new Address(
-        "testnet",
-        PaymentCredentials.script( feeOracle.hash )
-    );
-
-    await cli.utils.writeScript( feeOracle, `${env}/feeOracle.plutus.json` );
-    await cli.utils.writeAddress( feeOracleAddr, `${env}/feeOracle.addr` );
-
     const txBuilder = new TxBuilder(
         await getProtocolParams()
     );
 
-    const tx = txBuilder.buildSync({
-        inputs: [{ utxo }],
-        collaterals: [ utxo ],
-        collateralReturn: {
-            address: addr,
-            value: Value.sub(
-                utxo.resolved.value,
-                Value.lovelaces( 5_000_000 )
-            )
-        },
-        outputs: [
-            {
-                address: feeOracleAddr,
-                value: Value.lovelaces( 10_000_000 ),
-                datum: new DataB(""), // invalid datum for the contract; always fails
-                refScript: feeOracle
-            },
-            {
-                address: feeOracleAddr,
-                value: new Value([
-                    Value.singleAssetEntry(
-                        nftPolicy,
-                        tokenName,
-                        1
-                    ),
-                    Value.lovelaceEntry( 2_000_000 )
-                ]),
-                datum: new DataI( 25_000 ) // 2,5% fee
-            }
-        ],
-        changeAddress: addr
-    });
+    const tx = await makeFeeOracleAndGetDeployTx(
+        txBuilder,
+        utxo,
+        addr,
+        nftPolicy,
+        publicKey
+    );
 
     tx.signWith( privateKey );
 

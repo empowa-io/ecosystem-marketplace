@@ -71,8 +71,14 @@ function ppsFromJsonString( jsonStr: string ): ProtocolParamters
     }
     
     pps.executionUnitPrices = json.executionUnitPrices;
-    pps.maxTxExecutionUnits = ExBudget.fromJson( json.maxTxExecutionUnits );
-    pps.maxBlockExecutionUnits = ExBudget.fromJson( json.maxBlockExecutionUnits );
+    pps.maxTxExecutionUnits = new ExBudget({
+        mem: BigInt( json.maxTxExecutionUnits.memory ),
+        cpu: BigInt( json.maxTxExecutionUnits.steps ),
+    })
+    pps.maxBlockExecutionUnits = new ExBudget({
+        mem: BigInt( json.maxBlockExecutionUnits.memory ),
+        cpu: BigInt( json.maxBlockExecutionUnits.steps ),
+    });
     pps.maxValueSize = BigInt( json.maxValueSize );
     pps.collateralPercentage = BigInt( json.collateralPercentage );
     pps.maxCollateralInputs = BigInt( json.maxCollateralInputs );
