@@ -3,9 +3,11 @@ import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 import { withFolder } from "./utils/withFolder";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { koios } from "./providers/koios";
+import { provider } from "./providers/provider";
 import { getMintOneShotTx } from "./txns/getMintOneShotTx";
 import { makeFeeOracleAndGetDeployTx } from "./txns/feeOracle/makeFeeOracleAndGetDeployTx";
 import { makeMarketplaceAndGetDeployTx } from "./txns/marketplace/makeMarketplaceAndGetDeployTx";
+import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
 
 function getOutAsUTxO( tx: Tx, idx: number ): UTxO
 {
@@ -27,7 +29,10 @@ async function wait( n = 60 )
 void async function main()
 {
     const cfg = tryGetMarketplaceConfig();
-
+    let _pps = provider instanceof BlockfrostPluts ?
+        await provider:
+        await koios;
+    const isBlockFrost = provider instanceof BlockfrostPluts
     const env = cfg.envFolderPath;
 
     await  withFolder( env );
@@ -40,8 +45,10 @@ void async function main()
         await getProtocolParams()
     );
 
-    let utxos = await koios.address.utxos( addr );
+    let utxos= isBlockFrost ? await (_pps as BlockfrostPluts).addressUtxos(addr) : await koios.address.utxos( addr );
     
+    // let utxos = await koios.address.utxos( addr );
+    console.log("UTXOs: ", utxos)
     const initialUtxo = utxos[0]
 
     console.log(`using utxo '${initialUtxo.utxoRef}' as initial utxo parameter`);
@@ -54,7 +61,7 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    let txHash = await koios.tx.submit( tx );
+    let txHash = isBlockFrost? await (_pps as BlockfrostPluts).submitTx(tx) : await koios.tx.submit( tx );
 
     console.log([
         `-------------------------------------------------------------------------`,
@@ -75,8 +82,8 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    txHash = await koios.tx.submit( tx );
-
+    // txHash = await koios.tx.submit( tx );
+    txHash = isBlockFrost? await (_pps as BlockfrostPluts).submitTx(tx) : await koios.tx.submit( tx );
     console.log([
         `-------------------------------------------------------------------------`,
         `submitted tx that deploys the feeOracle contract;`,
@@ -99,7 +106,8 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    txHash = await koios.tx.submit( tx );
+    // txHash = await koios.tx.submit( tx );
+    txHash = isBlockFrost? await (_pps as BlockfrostPluts).submitTx(tx) : await koios.tx.submit( tx );
 
     console.log([
         `-------------------------------------------------------------------------`,
