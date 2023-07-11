@@ -2,10 +2,11 @@ import { Tx, TxBuilder, TxOut, TxOutRef, UTxO } from "@harmoniclabs/plu-ts";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 import { withFolder } from "./utils/withFolder";
 import { getProtocolParams } from "./utils/getProtocolParams";
-import { koios } from "./providers/koios";
 import { getMintOneShotTx } from "./txns/getMintOneShotTx";
 import { makeFeeOracleAndGetDeployTx } from "./txns/feeOracle/makeFeeOracleAndGetDeployTx";
 import { makeMarketplaceAndGetDeployTx } from "./txns/marketplace/makeMarketplaceAndGetDeployTx";
+import { provider } from "./providers/provider";
+import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
 
 function getOutAsUTxO( tx: Tx, idx: number ): UTxO
 {
@@ -32,6 +33,9 @@ void async function main()
 
     await  withFolder( env );
 
+    const queryUtxosAt = provider instanceof BlockfrostPluts ? provider.addressUtxos : provider.address.utxos;
+    const submitTx = provider instanceof BlockfrostPluts ? provider.submitTx : provider.tx.submit;
+
     const privateKey = cfg.signer.skey;
     const publicKey = cfg.signer.vkey;
     const addr = cfg.signer.address;
@@ -40,7 +44,7 @@ void async function main()
         await getProtocolParams()
     );
 
-    let utxos = await koios.address.utxos( addr );
+    let utxos = await queryUtxosAt( addr );
     
     const initialUtxo = utxos[0]
 
@@ -54,7 +58,7 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    let txHash = await koios.tx.submit( tx );
+    let txHash = await submitTx( tx );
 
     console.log([
         `-------------------------------------------------------------------------`,
@@ -75,7 +79,7 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    txHash = await koios.tx.submit( tx );
+    txHash = await submitTx( tx );
 
     console.log([
         `-------------------------------------------------------------------------`,
@@ -99,7 +103,7 @@ void async function main()
 
     tx.signWith( privateKey );
 
-    txHash = await koios.tx.submit( tx );
+    txHash = await submitTx( tx );
 
     console.log([
         `-------------------------------------------------------------------------`,
