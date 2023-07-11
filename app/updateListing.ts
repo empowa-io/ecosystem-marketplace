@@ -1,7 +1,5 @@
 
 import { Address, DataConstr, DataI, Tx, TxBuilder, TxOutRef, UTxO } from "@harmoniclabs/plu-ts";
-import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
-import { readFile } from "fs/promises";
 import { koios } from "./providers/koios";
 
 export async function getUpdateListingTx(
