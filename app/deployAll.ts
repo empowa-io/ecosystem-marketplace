@@ -33,8 +33,8 @@ void async function main()
 
     await  withFolder( env );
 
-    const queryUtxosAt = (provider instanceof BlockfrostPluts ? provider.addressUtxos : provider.address.utxos).bind( provider );
-    const submitTx = (provider instanceof BlockfrostPluts ? provider.submitTx : provider.tx.submit).bind( provider );
+    const queryUtxosAt = provider instanceof BlockfrostPluts ? provider.addressUtxos.bind( provider ) : provider.address.utxos.bind( provider.address );
+    const submitTx = provider instanceof BlockfrostPluts ? provider.submitTx.bind( provider ) : provider.tx.submit.bind( provider.tx );
 
     const privateKey = cfg.signer.skey;
     const publicKey = cfg.signer.vkey;
