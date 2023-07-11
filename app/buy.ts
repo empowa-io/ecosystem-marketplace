@@ -8,10 +8,6 @@ import { SaleAction } from "../src/contracts/marketplace";
 import Blockfrost from "@blockfrost/blockfrost-js";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
-const API = new Blockfrost.BlockFrostAPI({
-    projectId: "previewD7dYruaqECLZTKOzpDZfoDekk9hA78TR", // see: https://blockfrost.io
-});
-
 async function main()
 {
     const cfg = tryGetMarketplaceConfig();
