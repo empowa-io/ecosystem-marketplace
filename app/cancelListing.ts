@@ -8,17 +8,20 @@ export async function getCancelListingTx(
     txBuilder: TxBuilder,
     listingUtxo: UTxO,
     collateral: UTxO,
-    ownerAddress: Address
+    ownerAddress: Address,
+    marketplaceRef: TxOutRef
 ): Promise<Tx>
 {
+    /*
     const env = tryGetMarketplaceConfig().envFolderPath;
-
+    
     const [ mIdStr, mIdxStr ] = (await readFile(`${env}/marketplace.utxoRef`, { encoding: "utf-8" })).split("#");
 
     const marketplaceRef = new TxOutRef({
         id: mIdStr,
         index: parseInt( mIdxStr )
     });
+    */
 
     const marketplaceAddr = listingUtxo.resolved.address;
 

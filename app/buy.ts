@@ -1,11 +1,9 @@
-import { DataB, DataConstr, DataI, Hash28, PubKeyHash, Tx, TxBuilder, TxOutRef, Value, isData } from "@harmoniclabs/plu-ts";
+import { DataConstr, DataI, Hash28, PubKeyHash, Tx, TxBuilder, TxOutRef, Value, isData } from "@harmoniclabs/plu-ts";
 import { cli } from "./providers/cli";
 import { koios } from "./providers/koios";
 import { readFile } from "fs/promises";
 import { tokenName } from "./constants";
-import { getProtocolParams } from "./utils/getProtocolParams";
 import { SaleAction } from "../src/contracts/marketplace";
-import Blockfrost from "@blockfrost/blockfrost-js";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 
 async function main()
