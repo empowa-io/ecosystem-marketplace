@@ -36,7 +36,7 @@ export async function getUpdateListingTx(
                      * close redeemer can also be used to update a listed asset (and is more efficient than `Update`)
                      * 
                      * however the contract will not check that the asset is sent back to the contract
-                     * (which it does if using the `SaleAction.Update({})`, or  `new DataConstr(2, [ new DataI( newPrice ) ] )` redeemer)
+                     * (which it does if using the `SaleAction.Update({ newPrice })`, or  `new DataConstr(2, [ new DataI( newPrice ) ] )` redeemer)
                     **/
                     redeemer: new DataConstr( 1, [] ) // SaleAction.Close({})
                 }

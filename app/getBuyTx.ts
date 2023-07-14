@@ -16,7 +16,6 @@ export function getBuyTx(
     protocolFeeAmt: number | bigint,
     protocolOwnerAddress: Address,
     finalPrice: number | bigint
-
 ): Tx
 {
     let buyerPkh: PubKeyHash = undefined as any;
