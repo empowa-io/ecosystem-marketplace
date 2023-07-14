@@ -11,7 +11,7 @@ export interface GetListNFTArgs {
     lisingUtxo: UTxO
 }
 
-export async function getListNFTTx(
+export function getListNFTTx(
     txBuilder: TxBuilder,
     {
         changeAddress,
@@ -22,7 +22,7 @@ export async function getListNFTTx(
         price,
         lisingUtxo,
     }: GetListNFTArgs
-): Promise<Tx>
+): Tx
 {
     seller = seller instanceof PublicKey ? seller.hash : seller;
 

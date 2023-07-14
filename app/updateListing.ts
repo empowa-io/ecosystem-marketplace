@@ -5,9 +5,6 @@ import { koios } from "./providers/koios";
 export async function getUpdateListingTx(
     txBuilder: TxBuilder,
     newPrice: number | bigint,
-    /**
-     * 
-    **/
     marketplaceRef: TxOutRef,
     listingUtxo: UTxO,
     collateral: UTxO,

@@ -6,6 +6,7 @@ import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
 import { NFTSale } from "../src/contracts/marketplace";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
+import { getListNFTTx } from "./getListNFTTx";
 
 async function main()
 {
@@ -45,37 +46,18 @@ async function main()
 
     const txBuilder = new TxBuilder( await getProtocolParams() );
 
-    const tx = txBuilder.buildSync({
-        inputs: [{ utxo: lisingUtxo }],
-        collaterals: [ lisingUtxo ],
-        collateralReturn: {
-            address: addr,
-            value: Value.sub(
-                lisingUtxo.resolved.value,
-                Value.lovelaces( 5_000_000 )
-            )
-        },
-        outputs: [
-            {
-                address: marketplaceAddr,
-                value: new Value([
-                    Value.lovelaceEntry( 2_000_000 ),
-                    Value.singleAssetEntry(
-                        nftPolicy.hash,
-                        tokenName,
-                        1
-                    )
-                ]),
-                datum: NFTSale.NFTSale({
-                    policy:     pDataB( nftPolicy.hash.toBuffer() ),
-                    price:      pDataI( 10_000 ),
-                    seller:     pDataB( publicKey.hash.toBuffer() ),
-                    tokenName:  pDataB( tokenName ),
-                })
-            }
-        ],
-        changeAddress: addr
-    });
+    const tx = getListNFTTx(
+        txBuilder,
+        {
+            changeAddress: addr,
+            lisingUtxo,
+            marketplaceAddr,
+            nftName: tokenName,
+            nftPolicy: nftPolicy.hash.toBuffer(),
+            price: 10_000,
+            seller: publicKey
+        }
+    );
 
     tx.signWith( privateKey );
 
