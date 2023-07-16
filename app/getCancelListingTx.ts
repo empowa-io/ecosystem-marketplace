@@ -46,5 +46,5 @@ export async function getCancelListingTx(
         collaterals: [ collateral ],
         requiredSigners: [ ownerAddress.paymentCreds.hash ],
         changeAddress: ownerAddress
-    })
+    });
 }
