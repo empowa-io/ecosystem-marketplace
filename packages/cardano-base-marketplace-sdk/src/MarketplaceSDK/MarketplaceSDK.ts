@@ -1,4 +1,4 @@
-import { Address, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO } from "@harmoniclabs/plu-ts";
+import { Address, ITxBuildInput, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO } from "@harmoniclabs/plu-ts";
 import { getListTx } from "../txns/getListTx";
 import { getUpdateListingTx } from "../txns/getUpdateListingTx";
 import { getBuyTx } from "../txns/getBuyTx";
@@ -28,7 +28,8 @@ export interface ListArgs {
     nftName: Uint8Array,
     nftPolicy: Uint8Array,
     price: bigint | number,
-    seller: PublicKey | PubKeyHash | Address
+    seller: PublicKey | PubKeyHash | Address,
+    additionalInputs?: ITxBuildInput[]
 }
 
 export interface UpdateArgs {
