@@ -44,7 +44,7 @@ export interface BuyArgs {
     buyerAddress: Address,
     nftPolicy: Uint8Array,
     nftName: Uint8Array,
-    sellerAddress:Address
+    sellerAddress: Address
 }
 
 export interface CancelArgs {

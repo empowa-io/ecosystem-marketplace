@@ -1,4 +1,4 @@
-import { Address, DataB, DataConstr, DataI, Hash28, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO, Value, pDataB, pDataI } from "@harmoniclabs/plu-ts";
+import { Address, DataB, DataConstr, DataI, Hash28, ITxBuildInput, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO, Value, pDataB, pDataI } from "@harmoniclabs/plu-ts";
 
 export interface GetListTxArgs {
     changeAddress: Address,
@@ -7,7 +7,8 @@ export interface GetListTxArgs {
     nftName: Uint8Array,
     seller: PublicKey | PubKeyHash | Address,
     price: number | bigint,
-    lisingUtxo: UTxO
+    lisingUtxo: UTxO,
+    additionalInputs?: ITxBuildInput[]
 }
 
 export function getListTx(
@@ -20,14 +21,16 @@ export function getListTx(
         seller,
         price,
         lisingUtxo,
+        additionalInputs
     }: GetListTxArgs
 ): Tx
 {
+    additionalInputs = Array.isArray( additionalInputs ) ? additionalInputs : [];
     seller = seller instanceof Address ? seller.paymentCreds.hash : seller;
     seller = seller instanceof PublicKey ? seller.hash : seller;
 
     return txBuilder.buildSync({
-        inputs: [{ utxo: lisingUtxo }],
+        inputs: [{ utxo: lisingUtxo }].concat( additionalInputs ),
         collaterals: [ lisingUtxo ],
         collateralReturn: {
             address: changeAddress,
