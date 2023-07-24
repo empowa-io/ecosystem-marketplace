@@ -29,13 +29,18 @@ export function getListTx(
     seller = seller instanceof Address ? seller.paymentCreds.hash : seller;
     seller = seller instanceof PublicKey ? seller.hash : seller;
 
+    const inputs = [{ utxo: lisingUtxo }].concat( additionalInputs );
+    
+    const inputsValues = inputs.map( i => i.utxo.resolved.value );
+    const totInput = inputsValues.reduce( Value.add );
+    
     return txBuilder.buildSync({
-        inputs: [{ utxo: lisingUtxo }].concat( additionalInputs ),
+        inputs,
         collaterals: [ lisingUtxo ],
         collateralReturn: {
             address: changeAddress,
             value: Value.sub(
-                lisingUtxo.resolved.value,
+                totInput,
                 Value.lovelaces( 5_000_000 )
             )
         },
