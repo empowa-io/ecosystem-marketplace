@@ -38,6 +38,7 @@ export function getUpdateListingTx(
                 redeemer: new DataConstr( 1, [] ) // SaleAction.Close({})
             }
         },
+        { utxo: collateral },
         ...additionalInputs
     ];
 
