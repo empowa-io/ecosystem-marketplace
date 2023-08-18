@@ -67,7 +67,7 @@ export function getBuyTx(
             utxo: listingUtxo,
             referenceScriptV2: {
                 refUtxo: deployedMarketplaceUTxO,
-                redeemer: new DataConstr( 0, [] ), // 1SaleAction.Buy({}),
+                redeemer: new DataConstr( 0, [] ), // SaleAction.Buy({}),
                 datum: "inline"
             }
         }, { utxo: collateral }],

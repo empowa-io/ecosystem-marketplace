@@ -6,7 +6,8 @@ export interface UpdateListingArgs {
     collateral: UTxO,
     marketplaceAddr: Address,
     newPrice: number | bigint,
-    assetOwnerAddr: Address
+    assetOwnerAddr: Address,
+    additionalInputs: ITxBuildInput[]
 }
 
 export function getUpdateListingTx(
@@ -17,7 +18,8 @@ export function getUpdateListingTx(
         collateral,
         marketplaceAddr,
         newPrice,
-        assetOwnerAddr
+        assetOwnerAddr,
+        additionalInputs
     }: UpdateListingArgs
 ): Tx
 {
@@ -35,7 +37,8 @@ export function getUpdateListingTx(
                 **/
                 redeemer: new DataConstr( 1, [] ) // SaleAction.Close({})
             }
-        }
+        },
+        ...additionalInputs
     ];
 
     if( listingUtxo.utxoRef.toString() !== collateral.utxoRef.toString() )
