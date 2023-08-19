@@ -1,4 +1,4 @@
-import { Address, DataConstr, DataI, ITxBuildInput, Tx, TxBuilder, UTxO } from "@harmoniclabs/plu-ts";
+import { Address, DataConstr, DataI, ITxBuildInput, Tx, TxBuilder, TxOut, UTxO, Value } from "@harmoniclabs/plu-ts";
 
 export interface UpdateListingArgs {
     listingUtxo: UTxO
@@ -70,6 +70,17 @@ export function getUpdateListingTx(
             }
         ],
         collaterals: [ collateral ],
+        collateralReturn: Value.isAdaOnly( collateral.resolved.value ) ?
+            undefined :
+            new TxOut({
+                address: assetOwnerAddr,
+                value: Value.sub(
+                    collateral.resolved.value,
+                    Value.lovelaces(
+                        collateral.resolved.value.lovelaces - BigInt( 10_000_000 )
+                    )
+                )
+            }),
         requiredSigners: [ assetOwnerAddr.paymentCreds.hash ],
         changeAddress: assetOwnerAddr
     })
