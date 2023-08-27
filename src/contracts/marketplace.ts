@@ -1,4 +1,4 @@
-import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, Script, Term, bool, bs, compile, int, list, makeValidator, pBool, pInt, pIntToData, pStr, pdelay, perror, pfn, pforce, phoist, pif, pisEmpty, plam, plet, pmatch, pstruct, ptail, ptrace, ptraceIfFalse, ptraceIfTrue, punBData, punIData } from "@harmoniclabs/plu-ts";
+import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, Script, Term, bool, bs, compile, int, makeValidator, pBool, pInt, pIntToData, pdelay, perror, pfn, pforce, phoist, pisEmpty, plet, pmatch, pstruct, punBData, punIData } from "@harmoniclabs/plu-ts";
 import { pvalueOf } from "../utils/pvalueOf";
 import { isInputFromScript } from "../utils/isInputFromScript";
 
@@ -42,7 +42,7 @@ export const contract = pfn([
 
     const { tx } = ctx;
 
-    const valueOfToken = plet( pvalueOf.$( paymentAssetSym ).$( paymentAssetName ) );
+    const pvalueOfToken = plet( pvalueOf.$( paymentAssetSym ).$( paymentAssetName ) );
 
     const delSingedBySeller = plet(
         // not always needed
@@ -59,15 +59,10 @@ export const contract = pfn([
                 out.address.credential.raw.fields.head
             ).eq( hash );
 
-            const outValueGtEqAmt = out.value.some(entry =>
-                entry.fst.eq("")
-                .and(
-                    entry.snd.head.snd
-                    .gtEq( amt )
-                )
-            );
+            const outValueGtEqAmt = pvalueOfToken.$( out.value ).gtEq( amt )
             
-            return outToPkh.and( outValueGtEqAmt );
+            return outValueGtEqAmt
+            .and(  outToPkh );
         }))
     );
 
