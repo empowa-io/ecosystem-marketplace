@@ -51,7 +51,7 @@ void async function main()
     let utxos = await queryUtxosAt( addr );
     
     let policyCheck = (u: UTxO)=>{
-        if(cfg.paymentAsset.policy){
+        if(cfg.paymentAsset.policy && cfg.paymentAsset.tokenName){
             return u.resolved.value.get(cfg.paymentAsset.policy, cfg.paymentAsset.tokenName) >= 2_000_000n
         }
         return true
