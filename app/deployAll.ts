@@ -50,7 +50,18 @@ void async function main()
 
     let utxos = await queryUtxosAt( addr );
     
-    const initialUtxo = utxos[0]
+    let policyCheck = (u: UTxO)=>{
+        if(cfg.paymentAsset.policy){
+            return u.resolved.value.get(cfg.paymentAsset.policy, cfg.paymentAsset.tokenName) >= 2_000_000n
+        }
+        return true
+    }
+    const initialUtxo = utxos.find(u=>u.resolved.value.lovelaces >= 2_000_000 && policyCheck(u))
+
+    if (initialUtxo == undefined){
+        console.log(`Cannot find valid utxo`);    
+        return
+    }
 
     console.log(`using utxo '${initialUtxo.utxoRef}' as initial utxo parameter`);
 
