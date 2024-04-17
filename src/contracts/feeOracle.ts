@@ -43,11 +43,11 @@ export const feeOracle = pfn([
         ownInput.address.credential
     );
 
-    const ownHash = plet(
-        punBData.$(
-            ownCreds.raw.fields.head
-        )
-    );
+    // const ownHash = plet(
+    //     punBData.$(
+    //         ownCreds.raw.fields.head
+    //     )
+    // );
 
     const ownOut = plet(
         pmatch(
@@ -71,6 +71,8 @@ export const feeOracle = pfn([
     return ownerSigned
     .and(  validOwnInput )
     .and(  ownOutToSelf )
+    // prevent token dust attack
+    .and(  ownOut.value.length.eq( 2 ) )
     .and(  newFeeIsInRange )
     .and(  updatedFee )
 });

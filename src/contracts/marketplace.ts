@@ -184,7 +184,7 @@ export const contract = pfn([
         const singleScriptInput = pisEmpty.$( scriptInputs.tail );
 
         // inlined
-        const paidFee = paidAmtToHash.$( ownerFee ).$( owner );
+        const paidFee = feeNumerator.eq( 0 ).or( paidAmtToHash.$( ownerFee ).$( owner ) );
 
         return singleScriptInput
         .and(  onlyOneRequiredSigner )
