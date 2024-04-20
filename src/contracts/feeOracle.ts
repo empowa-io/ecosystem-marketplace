@@ -39,8 +39,8 @@ export const feeOracle = pfn([
 
     const validOwnInput = getNftQty.$( ownInput.value ).eq( 1 );
 
-    const ownCreds = plet(
-        ownInput.address.credential
+    const ownAddr = plet(
+        ownInput.address
     );
 
     // const ownHash = plet(
@@ -58,7 +58,8 @@ export const feeOracle = pfn([
     );
 
     // nft stays here
-    const ownOutToSelf = ownOut.address.credential.eq( ownCreds );
+    // audit 06
+    const ownOutToSelf = ownOut.address.eq( ownAddr );
 
     const newFeeIsInRange = newFeeNum.gtEq( 0 ).and( newFeeNum.ltEq( 1_000_000 ) );
 
@@ -66,12 +67,12 @@ export const feeOracle = pfn([
         POutputDatum.InlineDatum({
             datum: newFeeNumData
         })
-    )
+    );
 
     return ownerSigned
     .and(  validOwnInput )
     .and(  ownOutToSelf )
-    // prevent token dust attack
+    // prevent token dust attack (audit 07)
     .and(  ownOut.value.length.eq( 2 ) )
     .and(  newFeeIsInRange )
     .and(  updatedFee )

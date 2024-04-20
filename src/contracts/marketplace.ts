@@ -1,11 +1,12 @@
-import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, Script, Term, bool, bs, compile, int, makeValidator, pBool, pInt, pIntToData, pdelay, perror, pfn, pforce, phoist, pisEmpty, plet, pmatch, pstruct, punBData, punIData } from "@harmoniclabs/plu-ts";
+import { PAddress, PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, PTxInInfo, PTxOutRef, Script, Term, bool, bs, compile, int, makeValidator, pBool, pInt, pIntToData, pdelay, perror, pfn, pforce, phoist, pisEmpty, plet, pmatch, pstruct, punBData, punIData, punsafeConvertType } from "@harmoniclabs/plu-ts";
 import { pvalueOf } from "../utils/pvalueOf";
 import { isInputFromScript } from "../utils/isInputFromScript";
 
 export const NFTSale = pstruct({
     NFTSale: {
         price: int,
-        seller: PPubKeyHash.type,
+        // audit 06
+        seller: PAddress.type,
         policy: PCurrencySymbol.type,
         tokenName: PTokenName.type
     }
@@ -24,7 +25,7 @@ const feeDenominator = phoist(pInt(1_000_000));
 export const contract = pfn([
     PCurrencySymbol.type, // paymentAssetSym
     PTokenName.type, // paymentAssetName
-    PPubKeyHash.type, // owner
+    PAddress.type, // owner
     PCurrencySymbol.type, // oracle nft
     PTokenName.type, // oracle nft
     NFTSale.type,
@@ -40,7 +41,7 @@ export const contract = pfn([
     sale, action, ctx
 ) => {
 
-    const { tx } = ctx;
+    const { tx, purpose } = ctx;
 
     const pvalueOfToken = plet( pvalueOf.$( paymentAssetSym ).$( paymentAssetName ) );
 
@@ -51,18 +52,16 @@ export const contract = pfn([
         )
     );
 
-    const paidAmtToHash = plet(
-        pfn([ int, bs ], bool )
-        (( amt, hash ) => tx.outputs.some( out => {
+    const paidAmtToAddr = plet(
+        pfn([ int, PAddress.type ], bool )
+        (( amt, addr ) => tx.outputs.some( out => {
 
-            const outToPkh = punBData.$(
-                out.address.credential.raw.fields.head
-            ).eq( hash );
+            const outToAddr = out.address.eq( addr )
 
             const outValueGtEqAmt = pvalueOfToken.$( out.value ).gtEq( amt )
             
             return outValueGtEqAmt
-            .and(  outToPkh );
+            .and(  outToAddr );
         }))
     );
 
@@ -73,21 +72,31 @@ export const contract = pfn([
         // inlined
         const singedBySeller = pforce( delSingedBySeller );
 
-        // inlined
-        const singleIn = pisEmpty.$( tx.inputs.tail );
-
-        // inlined
-        const singleOut = pisEmpty.$( tx.outputs.tail );
-
-        const _in = plet( tx.inputs.head );
-        const out = plet( tx.outputs.head );
-        
-        const ownHash = plet(
-            punBData.$(
-                _in.resolved.address.credential
-                .raw.fields.head
+        // audit 08 (can't have single input)
+        const _in = plet(
+            plet(
+                pmatch( purpose )
+                .onSpending(({ utxoRef }) => utxoRef )
+                ._(_ => perror( PTxOutRef.type ) )
+            ).in( spendingRef =>
+                pmatch(
+                    tx.inputs.find( _in => _in.utxoRef.eq( spendingRef ))
+                )
+                .onJust(({ val }) => val )
+                .onNothing(_ => perror( PTxInInfo.type ) )
             )
         );
+        // we still require first output to be correct
+        const out = plet( tx.outputs.head );
+
+        const ownAddr = plet( _in.resolved.address );
+        
+        // const ownHash = plet(
+        //     punBData.$(
+        //         _in.resolved.address.credential
+        //         .raw.fields.head
+        //     )
+        // );
 
         const rawFields = sale.raw.fields;
 
@@ -95,8 +104,8 @@ export const contract = pfn([
         const validOutDatum = out.datum.eq(
             POutputDatum.InlineDatum({
                 datum: NFTSale.NFTSale({
-                    seller: rawFields.head,
                     price: pIntToData.$( newPrice ),
+                    seller: rawFields.tail.head,
                     policy: rawFields.tail.tail.head,
                     tokenName: rawFields.tail.tail.tail.head
                 }) as any
@@ -104,16 +113,13 @@ export const contract = pfn([
         );
 
         // inlined
-        const validOutAddress = pmatch( out.address.credential )
-        .onPScriptCredential(({ valHash }) => valHash.eq( ownHash ))
-        ._( _ => pBool( false ) ) 
+        // audit 06
+        const validOutAddress = out.address.eq( ownAddr )
 
         // inlined
         const validOut = validOutDatum.and( validOutAddress )
 
         return singedBySeller
-        .and(  singleIn )
-        .and(  singleOut )
         .and(  validOut );
     })
     .onBuy( _ => {
@@ -173,7 +179,7 @@ export const contract = pfn([
         );
 
         // inlined
-        const paidToSeller = paidAmtToHash.$( realPrice ).$( sale.seller )
+        const paidToSeller = paidAmtToAddr.$( realPrice ).$( sale.seller )
 
         // inlined
         const scriptInputs = tx.inputs.filter( isInputFromScript );
@@ -184,7 +190,7 @@ export const contract = pfn([
         const singleScriptInput = pisEmpty.$( scriptInputs.tail );
 
         // inlined
-        const paidFee = feeNumerator.eq( 0 ).or( paidAmtToHash.$( ownerFee ).$( owner ) );
+        const paidFee = feeNumerator.eq( 0 ).or( paidAmtToAddr.$( ownerFee ).$( owner ) );
 
         return singleScriptInput
         .and(  onlyOneRequiredSigner )
@@ -197,7 +203,7 @@ export const contract = pfn([
 function makeMarketplaceContract(
     paymentAssetSym: Term<typeof PCurrencySymbol>,
     paymentAssetName: Term<typeof PTokenName>,
-    owner: Term<typeof PPubKeyHash>,
+    owner: Term<typeof PAddress>,
     oracleNftSym: Term<typeof PCurrencySymbol>,
     oracleNftName: Term<typeof PTokenName>
 )
@@ -215,7 +221,7 @@ function makeMarketplaceContract(
 export function makeMarketplace(
     paymentAssetSym: Term<typeof PCurrencySymbol>,
     paymentAssetName: Term<typeof PTokenName>,
-    owner: Term<typeof PPubKeyHash>,
+    owner: Term<typeof PAddress>,
     oracleNftSym: Term<typeof PCurrencySymbol>,
     oracleNftName: Term<typeof PTokenName>
 )
