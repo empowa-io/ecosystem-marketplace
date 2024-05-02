@@ -12,7 +12,6 @@
     "marketplace:mintFeeOracleNftId": "npm run build && node dist/app/mintFeeOracleNftId.js",
     "marketplace:mintOneShot": "npm run marketplace:mintFeeOracleNftId",
     "marketplace:deployFeeOracle": "npm run build && node dist/app/deployFeeOracle.js",
-    "marketplace:foundFeeOracle": "npm run marketplace:deployFeeOracle",
     "marketplace:mintFungibleTokens": "npm run build && node dist/app/mintFungibleTokens.js",
     "marketplace:deployMarketplace": "npm run build && node dist/app/deployMarkeplace.js",
     "marketplace:listNFT": "npm run build && node dist/app/listNFT.js",

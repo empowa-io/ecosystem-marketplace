@@ -1,4 +1,4 @@
-import { Address, Hash28, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO, Value, pDataB, pDataI } from "@harmoniclabs/plu-ts";
+import { Address, Hash28, PubKeyHash, PublicKey, Tx, TxBuilder, UTxO, Value, pData, pDataB, pDataI } from "@harmoniclabs/plu-ts";
 import { NFTSale } from "../src/contracts/marketplace";
 
 export interface GetListNFTArgs {
@@ -6,7 +6,7 @@ export interface GetListNFTArgs {
     marketplaceAddr: Address,
     nftPolicy: Uint8Array,
     nftName: Uint8Array,
-    seller: PublicKey | PubKeyHash,
+    seller: Address,
     price: number | bigint,
     lisingUtxo: UTxO
 }
@@ -24,8 +24,6 @@ export function getListNFTTx(
     }: GetListNFTArgs
 ): Tx
 {
-    seller = seller instanceof PublicKey ? seller.hash : seller;
-
     return txBuilder.buildSync({
         inputs: [{ utxo: lisingUtxo }],
         collaterals: [ lisingUtxo ],
@@ -50,7 +48,7 @@ export function getListNFTTx(
                 datum: NFTSale.NFTSale({
                     policy:     pDataB( nftPolicy ),
                     price:      pDataI( price ),
-                    seller:     pDataB( seller.toBuffer() ),
+                    seller:     pData( seller.toData() ),
                     tokenName:  pDataB( nftName ),
                 })
             }

@@ -4,7 +4,6 @@ import { koios } from "./providers/koios";
 import { readFile } from "fs/promises";
 import { tokenName } from "./constants";
 import { getProtocolParams } from "./utils/getProtocolParams";
-import { NFTSale } from "../src/contracts/marketplace";
 import { tryGetMarketplaceConfig } from "./utils/tryGetMarketplaceConfig";
 import { getListNFTTx } from "./getListNFTTx";
 
@@ -15,7 +14,6 @@ async function main()
     const env = cfg.envFolderPath;
 
     const privateKey = cfg.signer.skey;
-    const publicKey = cfg.signer.vkey;
     const addr = cfg.signer.address;
 
     const marketplaceAddr = cli.utils.readAddress(`${env}/marketplace.addr`);
@@ -55,7 +53,7 @@ async function main()
             nftName: tokenName,
             nftPolicy: nftPolicy.hash.toBuffer(),
             price: 10_000,
-            seller: publicKey
+            seller: addr
         }
     );
 

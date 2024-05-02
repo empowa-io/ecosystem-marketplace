@@ -19,6 +19,7 @@ function getOutAsUTxO( tx: Tx, idx: number ): UTxO
     });
 }
 
+/** waits n seconds (60 default) */
 async function wait( n = 60 )
 {
     console.log(`waiting ${n} seconds to allow for the transaction to be included in the chain`);
@@ -101,8 +102,7 @@ void async function main()
         txBuilder,
         getOutAsUTxO( tx, 2 ),
         addr,
-        initialUtxo.utxoRef,
-        publicKey
+        initialUtxo.utxoRef
     );
 
     tx.signWith( privateKey );

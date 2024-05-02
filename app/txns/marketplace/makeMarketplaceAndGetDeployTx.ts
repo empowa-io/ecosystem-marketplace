@@ -1,4 +1,4 @@
-import { Address, Hash28, PCurrencySymbol, PPubKeyHash, PTokenName, PaymentCredentials, PublicKey, Tx, TxBuilder, TxOutRef, UTxO } from "@harmoniclabs/plu-ts";
+import { Address, Hash28, PAddress, PCurrencySymbol, PPubKeyHash, PTokenName, PaymentCredentials, PublicKey, Tx, TxBuilder, TxOutRef, UTxO, pData } from "@harmoniclabs/plu-ts";
 import { getDeployMarketplaceTx } from "./getDeployMarketplaceTx";
 import { readFile } from "fs/promises";
 import { makeMarketplace } from "../../../src/contracts/marketplace";
@@ -10,8 +10,7 @@ export async function makeMarketplaceAndGetDeployTx(
     txBuilder: TxBuilder,
     utxo: UTxO,
     addr: Address,
-    refParam: TxOutRef,
-    publicKey: PublicKey
+    refParam: TxOutRef
 ): Promise<Tx>
 {
     const cfg = tryGetMarketplaceConfig();
@@ -22,7 +21,7 @@ export async function makeMarketplaceAndGetDeployTx(
     const marketplace = makeMarketplace(
         PCurrencySymbol.from( cfg.paymentAsset.policy.toString() ),
         PTokenName.from( cfg.paymentAsset.tokenName ),
-        PPubKeyHash.from( publicKey.hash.toBuffer() ),
+        PAddress.fromData( pData( addr.toData() ) ),
         PCurrencySymbol.from( nftPolicy.toBuffer() ),
         PTokenName.from( tokenName )
     );

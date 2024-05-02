@@ -1,4 +1,4 @@
-import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, PTxOut, PTxOutRef, Script, Term, addUtilityForType, bool, compile, data, makeValidator, pIntToData, perror, pfn, plet, pmatch, punBData, punIData } from "@harmoniclabs/plu-ts";
+import { PCurrencySymbol, POutputDatum, PPubKeyHash, PScriptContext, PTokenName, PTxOut, PTxOutRef, Script, Term, addUtilityForType, bool, compile, data, makeValidator, pIntToData, perror, pfn, pisEmpty, plet, pmatch, punBData, punIData } from "@harmoniclabs/plu-ts";
 import { pvalueOf } from "../utils/pvalueOf";
 
 export const feeOracle = pfn([
@@ -30,6 +30,7 @@ export const feeOracle = pfn([
             ._( _ => perror( PTxOutRef.type ) )
         ).in( ownRef =>
             pmatch(
+                // find so we can have many inputs
                 ctx.tx.inputs.find( ({ utxoRef }) => utxoRef.eq( ownRef ) )
             )
             .onNothing( _ => perror( PTxOut.type ) )
@@ -51,7 +52,9 @@ export const feeOracle = pfn([
 
     const ownOut = plet(
         pmatch(
-            ctx.tx.outputs.find( out => getNftQty.$( out.value ).eq( 1 ) )
+            ctx.tx.outputs.find( out =>
+                getNftQty.$( out.value ).eq( 1 )
+            )
         )
         .onNothing( _ => perror( PTxOut.type ) )
         .onJust(({ val }) => val )
@@ -73,7 +76,7 @@ export const feeOracle = pfn([
     .and(  validOwnInput )
     .and(  ownOutToSelf )
     // prevent token dust attack (audit 07)
-    .and(  ownOut.value.length.eq( 2 ) )
+    .and(  pisEmpty.$( ownOut.value.tail.tail ) )
     .and(  newFeeIsInRange )
     .and(  updatedFee )
 });

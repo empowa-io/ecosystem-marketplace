@@ -5,7 +5,7 @@ export interface GetListTxArgs {
     marketplaceAddr: Address,
     nftPolicy: Uint8Array,
     nftName: Uint8Array,
-    seller: PublicKey | PubKeyHash | Address,
+    seller: Address,
     price: number | bigint,
     lisingUtxo: UTxO,
     additionalInputs?: ITxBuildInput[]
@@ -26,8 +26,6 @@ export function getListTx(
 ): Tx
 {
     additionalInputs = Array.isArray( additionalInputs ) ? additionalInputs : [];
-    seller = seller instanceof Address ? seller.paymentCreds.hash : seller;
-    seller = seller instanceof PublicKey ? seller.hash : seller;
 
     const inputs = [{ utxo: lisingUtxo }].concat( additionalInputs );
     
@@ -59,7 +57,7 @@ export function getListTx(
                     0, // NFTSale.NFTSale
                     [ // DO NOT CHANGE ORDER
                         new DataI( price ), // price
-                        new DataB( seller.toBuffer() ), // seller
+                        seller.toData(), // seller
                         new DataB( nftPolicy ), // policy
                         new DataB( nftName ), // tokenName
                     ]
