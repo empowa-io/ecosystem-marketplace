@@ -1,4 +1,8 @@
-import { phoist, pfn, PValue, PCurrencySymbol, PTokenName, int, precursiveList, PValueEntryT, pdelay, pInt, fn, list, pif, PAssetsEntryT } from "@harmoniclabs/plu-ts";
+import { phoist, pfn, PValue, PCurrencySymbol, PTokenName, int, precursiveList, pdelay, pInt, fn, list, pif, PValueEntry, PAssetsEntry } from "@harmoniclabs/plu-ts";
+
+const PValueEntryT = PValueEntry.type;
+const PAssetsEntryT = PAssetsEntry.type;
+
 
 export const pvalueOf = phoist(
     pfn([
@@ -7,7 +11,7 @@ export const pvalueOf = phoist(
         PValue.type
     ],  int)
     (( currSym, tokenName, value ) =>
-        precursiveList( int, PValueEntryT )
+        precursiveList( int, PValueEntry.type )
         .$( _self => pdelay( pInt(0) ) )
         .$( 
 

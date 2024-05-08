@@ -42,8 +42,7 @@ async function main()
         txBuilder,
         utxo,
         addr,
-        ref,
-        publicKey
+        ref
     );
 
     tx.signWith( privateKey );
