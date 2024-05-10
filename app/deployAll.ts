@@ -51,7 +51,7 @@ void async function main()
 
     let utxos = await queryUtxosAt( addr );
     
-    const initialUtxo = utxos[0]
+    const initialUtxo = utxos.find( u => u.resolved.value.lovelaces >= 5_200_000 ) ?? utxos[0];
 
     console.log(`using utxo '${initialUtxo.utxoRef}' as initial utxo parameter`);
 
