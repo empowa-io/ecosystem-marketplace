@@ -24,6 +24,7 @@
     "@harmoniclabs/koios-pluts": "^0.1.4-dev1",
     "@harmoniclabs/obj-utils": "^1.0.0",
     "@harmoniclabs/plu-ts": "^0.7.0",
+    "@harmoniclabs/plutus-machine": "1.0.4",
     "@harmoniclabs/uint8array-utils": "^1.0.0"
   },
   "devDependencies": {
