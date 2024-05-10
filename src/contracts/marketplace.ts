@@ -48,7 +48,7 @@ export const contract = pfn([
     const delSingedBySeller = plet(
         // not always needed
         pdelay(
-            tx.signatories.some( sale.seller.eqTerm )
+            tx.signatories.some( punBData.$( sale.seller.credential.raw.fields.head ).peq )
         )
     );
 
@@ -105,7 +105,7 @@ export const contract = pfn([
             POutputDatum.InlineDatum({
                 datum: NFTSale.NFTSale({
                     price: pIntToData.$( newPrice ),
-                    seller: rawFields.tail.head,
+                    seller: PAddress.fromData( rawFields.tail.head ) as any,
                     policy: rawFields.tail.tail.head,
                     tokenName: rawFields.tail.tail.tail.head
                 }) as any

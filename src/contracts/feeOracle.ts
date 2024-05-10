@@ -20,7 +20,7 @@ export const feeOracle = pfn([
 
     const getNftQty = plet( pvalueOf.$( nftSym ).$( nftName ) )
 
-    const ownerSigned = ctx.tx.signatories.some( owner.eqTerm );
+    const ownerSigned = ctx.tx.signatories.some( owner.peq );
 
     const ownInput = addUtilityForType( PTxOut.type )
     (

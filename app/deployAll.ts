@@ -20,7 +20,7 @@ function getOutAsUTxO( tx: Tx, idx: number ): UTxO
 }
 
 /** waits n seconds (60 default) */
-async function wait( n = 60 )
+async function wait( n = 30 )
 {
     console.log(`waiting ${n} seconds to allow for the transaction to be included in the chain`);
     await new Promise( res => setTimeout( res, n * 1000 ) );    
