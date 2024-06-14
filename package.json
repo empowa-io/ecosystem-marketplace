@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "vitest run",
     "build": "tsc -p ./tsconfig.json && tsc-alias -p ./tsconfig.json",
     "tokenNameToHex": "npm run --silent build && node dist/app/utils/getTokenNameHex.js",
     "marketplace:deployAll": "npm run build && node dist/app/deployAll.js",
@@ -28,6 +28,7 @@
     "@harmoniclabs/uint8array-utils": "^1.0.0"
   },
   "devDependencies": {
+    "@anastasia-labs/lucid-cardano-fork": "^0.10.7",
     "@babel/preset-env": "^7.21.5",
     "@babel/preset-typescript": "^7.21.5",
     "@types/blake2": "^4.0.1",
@@ -37,6 +38,7 @@
     "dotenv": "^16.0.3",
     "jest": "^29.5.0",
     "tsc-alias": "^1.7.1",
-    "typescript": "^4.8.4"
+    "typescript": "^4.8.4",
+    "vitest": "^1.6.0"
   }
 }
