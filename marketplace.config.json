@@ -5,7 +5,7 @@
         "preprod",
         "preview"
     ],
-    "network": "preprod",
+    "network": "preview",
 
     "envFolderPath_comment": [
         "folder that will be used by the various sub commands to generate files"
@@ -25,7 +25,7 @@
     ],
     "signer": {
         "skeyPath": "./secret_testnet/payment.skey",
-        "vkeyPath": null,
+        "vkeyPath": "./secret_testnet/payment.vkey",
         "address": null 
     },
 
@@ -34,7 +34,7 @@
         " - will be able to update the fee that the marketplace takes",
         " - will receive the fee"
     ],
-    "ownerAddress": "your_address_here",
+    "ownerAddress": "addr_test1qz9xjqt3782pnl9x3xfc5gmsf0c7k4jmyqrqfpqvu29acpc5yjq452kdxdqkadnzyajefafdxxtc0rcfxhu2frnjdqeq9cvznn",
 
     "paymentAsset": {
 

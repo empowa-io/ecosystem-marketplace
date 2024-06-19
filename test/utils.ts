@@ -66,6 +66,11 @@ export const lutxoToUTxO = (u: LUTxO): UTxO => {
     return new UTxO(iutxo);
   };
 
+  export const lutxoToUTxOArray = (u: LUTxO[]): UTxO[] => {
+    const mappedUTxos = u.map(lutxoToUTxO)
+    return mappedUTxos
+  }
+
   const assertNever = (value: never): never => {
     throw new Error(`Unexpected value: ${value}`);
   };
