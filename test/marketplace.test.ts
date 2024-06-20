@@ -14,6 +14,8 @@ import { getDeployMarketplaceTx } from "../app/txns/marketplace/getDeployMarketp
 import { makeMarketplaceAndGetDeployTx } from "../app/txns/marketplace/makeMarketplaceAndGetDeployTx.ts"
 import { readFile, writeFile } from "fs/promises";
 
+
+// parameter for marketplace-- improper fee amount
    const signerAddr = await generateAccountSeedPhrase({lovelace: 100_000_000n});
     
    const emulator = new Emulator([signerAddr]);
@@ -35,7 +37,7 @@ import { readFile, writeFile } from "fs/promises";
       const nfttxHash = await signedLucidTx.submit();
       
       emulator.awaitBlock(50);
-
+      
       console.log("Utxos after minting", await lucid.utxosAt(signerAddr.address));
       const lucidUtxosAfterMint = await lucid.utxosAt(signerAddr.address);
 

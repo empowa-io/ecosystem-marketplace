@@ -5,3 +5,7 @@ secrets/
 marketplace.config.local.json
 testnet/
 #audit/
+test/feeOracleLatest.test.ts
+test/getDeployFeeOracleTest.ts
+test/getMintOneShotTest.ts
+test/trail.test.ts

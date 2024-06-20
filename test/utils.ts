@@ -118,6 +118,11 @@ export const UTxOTolUtxo = (u: UTxO): LUTxO => {
    
     return utxo;
   };
+/*
+  export const utxoToLUTxOArray = (u: UTxO[]): LUTxO[] => {
+    const mappedUTxos = u.map(UTxOTolUtxo);
+    return mappedUTxos
+  }*/
 
   export function getUtxoWithAssets(utxos: LUTxO[], minAssets: LAssets): LUTxO[] {
     const utxo = utxos.find((utxo) => {
