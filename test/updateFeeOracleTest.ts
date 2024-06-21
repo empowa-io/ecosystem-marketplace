@@ -11,7 +11,7 @@ export async function getFeeUpdateTxTest(
     lucid : Lucid,
     txBuilder: TxBuilder,
     newFee: number,
-    //ownerPkh: Hash28,
+    ownerPkh: Hash28,
     collateral: UTxO,
     feeOracleInput : UTxO,
     feeOracleSource :  UTxO

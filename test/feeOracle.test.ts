@@ -1,4 +1,4 @@
-import { Data, Emulator, Lucid, Tx } from "@anastasia-labs/lucid-cardano-fork";
+import { Data, Emulator, Lucid, OutputData, Tx } from "@anastasia-labs/lucid-cardano-fork";
 import { UTxOTolUtxo, generateAccountSeedPhrase, getUtxoWithAssets, lutxoToUTxO, lutxoToUTxOArray } from "../test/utils";
 import { Address, DataI, Hash28, PCurrencySymbol, PPubKeyHash, PTokenName, PTxOutRef, PaymentCredentials, PubKeyHash, Script, TxBuilder, UTxO, defaultProtocolParameters, pData } from "@harmoniclabs/plu-ts";
 import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy";
@@ -8,8 +8,11 @@ import { feeOracle, makeFeeOracle } from "../src/contracts/feeOracle";
 import { tryGetMarketplaceConfig } from "../app/utils/tryGetMarketplaceConfig";
 import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import {test, describe} from 'vitest';
-import { getDeployFeeOracleTx } from "../app/txns/feeOracle/getDeployFeeOracleTx.ts";
+import { getDeployFeeOracleTestTx } from "../test/getDeployFeeOracleTest.ts";
 import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
+import { getFeeUpdateTx } from "../app/updateFeeOracle.ts"
+import { getMintOneShotTestTx } from "../test/getMintOneShotTest.ts" ;
+import { makeFeeOracleAndGetDeployTestTx} from "../test/makeFeeOracleAndGetDeployTest.ts"
 
 
    const signerAddr = await generateAccountSeedPhrase({lovelace: 100_000_000n});
@@ -19,14 +22,15 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
 
    const lucid = await Lucid.new(emulator);
 
-   async function abstractTx(nonbeaconUtxo : boolean) : Promise<{ policyhash : Hash28 , utxo : UTxO[], script : Script<"PlutusScriptV2">; }> { 
+   // abstractTx is an abstract function to resuse for later
+   async function abstractTx(nonbeaconUtxo : boolean) : Promise<{ policyhash : Hash28 , utxo : UTxO[], script : Script<"PlutusScriptV2">,ownpkh :PubKeyHash; }> { 
       lucid.selectWalletFromSeed (signerAddr.seedPhrase);
       const initialUtxos = await lucid.wallet.getUtxos();
       const refl = initialUtxos[0];
       const ref = lutxoToUTxO(refl);
       //const refParam = lutxoToUTxO((await lucid.wallet.getUtxos()).at[0]);
       //const oneShotMintTx = await getMintOneShotTx(new TxBuilder(defaultProtocolParameters),refParam,refParam.resolved.address);
-      const oneShotMintTx = await getMintOneShotTx(new TxBuilder(defaultProtocolParameters),ref,ref.resolved.address);
+      const oneShotMintTx = await getMintOneShotTx(new TxBuilder(await getProtocolParams()),ref,ref.resolved.address);
 
       const policy = oneShotMintTx.nftPolicySource.hash;
 
@@ -60,7 +64,7 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
          PaymentCredentials.script( feeOracle.hash )
       );
 
-      const offChainTxFeeOracle = await getDeployFeeOracleTx(new TxBuilder(await getProtocolParams()),
+      const offChainTxFeeOracle = await getDeployFeeOracleTestTx(new TxBuilder(await getProtocolParams()),
                                         utxoWithNft,utxoWithNft.resolved.address,feeOracleAddr,feeOracle,policy);
 
       const tobeSignedFeeOracleTx = offChainTxFeeOracle.toCbor();
@@ -80,7 +84,9 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
          type feeOracleDatum = Data.Static<typeof feeOracleDatumSchema>;
          const feeOracleDatum = feeOracleDatumSchema as unknown as feeOracleDatum;
          const datum: feeOracleDatum = 0n// 40_000n; //0
-         const newDatum = Data.to(datum, feeOracleDatum);
+         //const newDatum = Data.to(datum, feeOracleDatum);
+
+         const newDatum: OutputData = {inline: Data.to(datum, feeOracleDatum)};
 
          const tx = await lucid.newTx().payToContract(feeOracleAddr.toString(),newDatum,{lovelace : 2_000_000n}).complete();
          const txsigned = await tx.sign().complete();
@@ -96,7 +102,8 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
       return {
             policyhash : policy,
             utxo : feeOraclePlutsUtxos,
-            script : feeOracle
+            script : feeOracle,
+            ownpkh : publicKeyHash
 
       }
       //includes get deplyfeeoracle
@@ -125,67 +132,34 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts"
       const collateral = lutxoToUTxO(collateralUtxos[0]);
       const updateTx =await getFeeUpdateTxTest(lucid,new TxBuilder(await getProtocolParams()),newFee,collateral,utxoWithNft,feeOracleSource);
       */
-
+      const failureutxo = utxo.utxo.find(u => u.resolved.datum?.toString() === new DataI(0).toString())!;
+                          // && (utxo.utxo.find( u => u.resolved.refScript === undefined))!;
+      console.log("Failure Utxo", UTxOTolUtxo(failureutxo));
       // UpdateFeeOracleTest with a no ouputs
-      const newFee = 300_000_000;
+      const newFee = 30_000;
       const collateralUtxos = await lucid.utxosAt(signerAddr.address);
       const collateral = lutxoToUTxO(collateralUtxos[0]);
-      const updateTx =await getFeeUpdateTxTest(lucid,new TxBuilder(await getProtocolParams()),newFee,collateral,utxoWithNft,feeOracleSource);
-      
+      console.log("collateral", collateralUtxos);
+      const ownerPkh = new Hash28(lucid.utils.paymentCredentialOf(signerAddr.address).hash)
+      const updateTx =await getFeeUpdateTxTest(lucid,new TxBuilder(await getProtocolParams()),newFee,ownerPkh,
+         collateral,utxoWithNft,feeOracleSource);
+      //const updateTx =await getFeeUpdateTx(new TxBuilder(await getProtocolParams()),newFee,ownerPkh,
+        //                               collateral);
+      //const tx = lucid.fromTx(updateTx.toCbor().toString());
+      //tx.sign().complete();
 
-
-      // to find a Utxo without NFT
-
-     // const utxoWithoutNft = (utxo.utxo.find((u => u.resolved.value.get(utxo.policyhash,tokenName) != 1n)
-                 //                   &&(u => u.resolved.refScript? != utxo.script )))!;
-                              //&& (utxo.utxo.find(u => u.resolved.refScript != utxo.script )))!;
-     // const lucidUtxWithoutNft = UTxOTolUtxo(utxoWithoutNft);
-    //  console.log("Utxos without NFt", lucidUtxWithoutNft);
-
+         
+      emulator.awaitBlock(20);
 /*
-     
-      const cfg = tryGetMarketplaceConfig();
-      const paymentCred = lucid.utils.paymentCredentialOf(signerAddr.address);
-      const publicKeyHash = new PubKeyHash (paymentCred.hash);
-
-      const feeOracle = makeFeeOracle(
-         PCurrencySymbol.from( policy.toBuffer() ),
-         PTokenName.from( tokenName ),
-         PPubKeyHash.from( publicKeyHash.toBuffer() )
-      );
-
-      const feeOracleAddr = new Address(
-         cfg.network === "mainnet" ? "mainnet" : "testnet",
-         PaymentCredentials.script( feeOracle.hash )
-      );
-
-      const offChainTxFeeOracle = await getDeployFeeOracleTx(new TxBuilder(await getProtocolParams()),
-                                        utxoWithNft,utxoWithNft.resolved.address,feeOracleAddr,feeOracle,policy); 
-
-      // one more tx at feee oracle addr without nft
-      // this 3rd utxo can be referenced to the marketplace contract
-
-      const tobeSignedFeeOracleTx = offChainTxFeeOracle.toCbor();
-
-      const lucidFeeOracleTx = lucid.fromTx(tobeSignedFeeOracleTx.toString());
-                                                                          
-      const signedLucidFeeOracleTx = await lucidFeeOracleTx.sign().complete();
-                                                                          
-      const txHashFeeOracle = await signedLucidFeeOracleTx.submit();
-    
-      emulator.awaitBlock(50);
-
-      console.log("utxos at fee oracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
-
-      console.log("utxos at address with oneshot mint", await lucid.utxosAt(signerAddr.address));
-
   }
    catch(error){
        console.log(error);
      }
    },40_000); 
 
+   */
 
+/*
 describe('The contract will not execute if OneShotMintNFT is not referenced.', () => {
   test("Fee Oracle Contract - Failure case", async() =>{
   try{
@@ -221,14 +195,14 @@ describe('The contract will not execute if OneShotMintNFT is not referenced.', (
                                                                        
    const txHashFeeOracle = await signedLucidFeeOracleTx.submit();
  
-   emulator.awaitBlock(50); */
+   emulator.awaitBlock(50); 
 
-   //console.log("utxos at fee oracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
+   console.log("utxos at fee oracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
 
-   //console.log("utxos at address with oneshot mint", await lucid.utxosAt(signerAddr.address));
-//}
-//  catch(error){
-//    console.log(error);
-//  }
-//})
-//},40_000); 
+   console.log("utxos at address with oneshot mint", await lucid.utxosAt(signerAddr.address));
+}
+  catch(error){
+    console.log(error);
+  }
+})
+},40_000); */

@@ -34,7 +34,7 @@ export async function getFeeUpdateTx(
 
     const feeOracleUtxos = await koios.address.utxos( feeOracleAddr );
 
-    console.log( feeOracleUtxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
+    //console.log( feeOracleUtxos.map( u => JSON.stringify( u.toJson(), null, 2 ) ) );
 
     const nftPolicy = new Hash28( await readFile(`${env}/feeOracleNft_${ref}.policy`, { encoding: "utf-8" }) );
 
