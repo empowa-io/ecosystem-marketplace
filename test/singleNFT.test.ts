@@ -1,72 +1,88 @@
+import { Emulator, Lucid } from "@anastasia-labs/lucid-cardano-fork";
+import { test, expect } from "vitest";
+import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
+import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy";
 import {
-    Emulator,
-    Lucid  } from '@anastasia-labs/lucid-cardano-fork';
-
-import { test,expect } from "vitest";
-import { getMintOneShotTx } from "../app/txns/getMintOneShotTx"
-import { makeFeeOracleNftPolicy } from '../src/contracts/feeOracleNftIdPolicy';
-import { getUtxoWithAssets, lutxoToUTxO, generateAccountSeedPhrase } from "../test/utils";
-import { defaultProtocolParameters, pData, PTxOutRef, TxBuilder } from '@harmoniclabs/plu-ts';
-import { tokenName } from '../app/constants';
-
+  getUtxoWithAssets,
+  lutxoToUTxO,
+  generateAccountSeedPhrase,
+} from "../test/utils";
+import {
+  defaultProtocolParameters,
+  pData,
+  PTxOutRef,
+  TxBuilder,
+} from "@harmoniclabs/plu-ts";
+import { tokenName } from "../app/constants";
 
 test("Test - Only one NFT minted", async () => {
-     
-    const userAddress1 = await generateAccountSeedPhrase({lovelace : 20_000_000n});
-  
-    const emulator = new Emulator([userAddress1]); 
-      
-    const lucid = await Lucid.new(emulator); 
+  const userAddress1 = await generateAccountSeedPhrase({
+    lovelace: 20_000_000n,
+  });
 
-    lucid.selectWalletFromSeed (userAddress1.seedPhrase);
+  const emulator = new Emulator([userAddress1]);
 
-    const tx = await lucid.newTx().payToAddress(userAddress1.address,{lovelace:10_000_000n}).complete();
+  const lucid = await Lucid.new(emulator);
 
-    const signedTx = await tx.sign().complete(); 
-    const tx1Hash = await signedTx.submit();
+  lucid.selectWalletFromSeed(userAddress1.seedPhrase);
 
-    //console.log ("Tx hash",txhash);
+  const tx = await lucid
+    .newTx()
+    .payToAddress(userAddress1.address, { lovelace: 10_000_000n })
+    .complete();
 
-    emulator.awaitBlock(500);
+  const signedTx = await tx.sign().complete();
+  const tx1Hash = await signedTx.submit();
 
-    const utxos = await lucid.utxosAt(userAddress1.address);
+  //console.log ("Tx hash",txhash);
 
-    const plutusUtxos = lutxoToUTxO(utxos[0]);
+  emulator.awaitBlock(500);
 
-    const ref = plutusUtxos.utxoRef; 
-  
-    const offChainTx = await getMintOneShotTx(new TxBuilder(defaultProtocolParameters),plutusUtxos,plutusUtxos.resolved.address);
+  const utxos = await lucid.utxosAt(userAddress1.address);
 
-    const toBeSignedTx = lucid.fromTx(offChainTx.tx.toCbor().toString());
+  const plutusUtxos = lutxoToUTxO(utxos[0]);
 
-    const signedLucidTx = await toBeSignedTx.sign().complete();
+  const ref = plutusUtxos.utxoRef;
 
-    const tx2Hash = await signedLucidTx.submit();
-    
-    const feeOracleNftPolicy = makeFeeOracleNftPolicy( PTxOutRef.fromData( pData( ref.toData() ) ) );
-       
-    const policy = feeOracleNftPolicy.hash.toString();
+  const offChainTx = await getMintOneShotTx(
+    new TxBuilder(defaultProtocolParameters),
+    plutusUtxos,
+    plutusUtxos.resolved.address
+  );
 
-    const unit = policy+tokenName.toString();
+  const toBeSignedTx = lucid.fromTx(offChainTx.tx.toCbor().toString());
 
-    emulator.awaitBlock(50);
+  const signedLucidTx = await toBeSignedTx.sign().complete();
 
-    const lucidUtxosAfterTx = await lucid.utxosAt(userAddress1.address);
-    
-    const utxosWithUnitFromTx = getUtxoWithAssets(lucidUtxosAfterTx,{[unit]:1n});
+  const tx2Hash = await signedLucidTx.submit();
 
-    const utxosWithUnitFromAddr = await lucid.utxosAtWithUnit(userAddress1.address,unit);
-    //console.log("Utxos with unit", utxoswithunit);
+  const feeOracleNftPolicy = makeFeeOracleNftPolicy(
+    PTxOutRef.fromData(pData(ref.toData()))
+  );
 
-    //const plutusUtxosAfterTx = lutxoToUTxO(utxoswithunit);
+  const policy = feeOracleNftPolicy.hash.toString();
 
-    //console.log("plu-ts utxo", plutusUtxosAfterTx);
+  const unit = policy + tokenName.toString();
 
-    //const utxo = utxos.find( u => u.resolved.value.get( nftPolicy, tokenName ) === 1n )
-    
-    expect(utxosWithUnitFromTx).toStrictEqual(utxosWithUnitFromAddr);
+  emulator.awaitBlock(50);
 
-  },40_000);
+  const lucidUtxosAfterTx = await lucid.utxosAt(userAddress1.address);
 
-    
-    
+  const utxosWithUnitFromTx = getUtxoWithAssets(lucidUtxosAfterTx, {
+    [unit]: 1n,
+  });
+
+  const utxosWithUnitFromAddr = await lucid.utxosAtWithUnit(
+    userAddress1.address,
+    unit
+  );
+  //console.log("Utxos with unit", utxoswithunit);
+
+  //const plutusUtxosAfterTx = lutxoToUTxO(utxoswithunit);
+
+  //console.log("plu-ts utxo", plutusUtxosAfterTx);
+
+  //const utxo = utxos.find( u => u.resolved.value.get( nftPolicy, tokenName ) === 1n )
+
+  expect(utxosWithUnitFromTx).toStrictEqual(utxosWithUnitFromAddr);
+}, 40_000);
