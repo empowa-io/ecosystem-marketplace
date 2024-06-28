@@ -72,18 +72,14 @@ export const contract = pfn([
         // inlined
         const singedBySeller = pforce( delSingedBySeller );
 
-        // audit 08 (can't have single input)
+        // audit 08
         const _in = plet(
             plet(
                 pmatch( purpose )
                 .onSpending(({ utxoRef }) => utxoRef )
                 ._(_ => perror( PTxOutRef.type ) )
             ).in( spendingRef =>
-                pmatch(
-                    tx.inputs.find( _in => _in.utxoRef.eq( spendingRef ))
-                )
-                .onJust(({ val }) => val )
-                .onNothing(_ => perror( PTxInInfo.type ) )
+                tx.inputs.filter( _in => _in.utxoRef.eq( spendingRef )).head
             )
         );
         // we still require first output to be correct
@@ -91,12 +87,21 @@ export const contract = pfn([
 
         const ownAddr = plet( _in.resolved.address );
         
-        // const ownHash = plet(
-        //     punBData.$(
-        //         _in.resolved.address.credential
-        //         .raw.fields.head
-        //     )
-        // );
+        // audit 08
+        // inlined
+        const singleInputFormSelf = (
+            plet(
+                _in.resolved.address.credential.peq
+            ).in( isOwnCreds => 
+                pisEmpty.$(
+                    tx.inputs.filter( _in => 
+                        isOwnCreds.$(
+                            _in.resolved.address.credential
+                        )
+                    )
+                )
+            )
+        );
 
         const rawFields = sale.raw.fields;
 
@@ -200,7 +205,7 @@ export const contract = pfn([
     });
 });
 
-function makeMarketplaceContract(
+export function makeMarketplaceContract(
     paymentAssetSym: Term<typeof PCurrencySymbol>,
     paymentAssetName: Term<typeof PTokenName>,
     owner: Term<typeof PAddress>,
