@@ -50,9 +50,7 @@ const emulator = new Emulator([signerAddr, ownerAddr, adversaryAddr]);
 const lucid = await Lucid.new(emulator);
 
 // abstractTx is an abstract function to resuse for later
-export async function abstractTx(
-  nonbeaconUtxo: boolean
-): Promise<{
+export async function abstractTx(nonbeaconUtxo: boolean): Promise<{
   policyhash: Hash28;
   utxo: UTxO[];
   script: Script<"PlutusScriptV2">;
@@ -162,48 +160,49 @@ export async function abstractTx(
 }
 //1.another addr not allowed to spend the utxo
 //2. none of the utxo should be spendable
-describe("The contract intentionally fails as the datum is invalid in the contract", () => {
-  test("Fee Oracle Contract", async () => {
-    try {
-      // to find a UTXo with NFt
-      const utxo = await abstractTx(true);
-      //const policy = utxo.policyhash;
-      const utxoWithNft = utxo.utxo.find(
-        (u) => u.resolved.value.get(utxo.policyhash, tokenName) === 1n
-      )!;
-      const lucidUtxo = UTxOTolUtxo(utxoWithNft);
-      //console.log("Utxos with NFt", lucidUtxo);
+//describe("The contract intentionally fails as the datum is invalid in the contract", () => {
+//  test("Fee Oracle Contract", async () => {
+//    try {
+// to find a UTXo with NFt
+const utxo = await abstractTx(true);
+//const policy = utxo.policyhash;
+const utxoWithNft = utxo.utxo.find(
+  (u) => u.resolved.value.get(utxo.policyhash, tokenName) === 1n
+)!;
+const lucidUtxo = UTxOTolUtxo(utxoWithNft);
+//console.log("Utxos with NFt", lucidUtxo);
 
-      const feeOracleSource = utxo.utxo.find(
-        (u) => u.resolved.refScript !== undefined
-      )!;
-      const lucidFeeOracleSrc = UTxOTolUtxo(feeOracleSource);
-      //console.log("utxo with soure",lucidFeeOracleSrc);
+const feeOracleSource = utxo.utxo.find(
+  (u) => u.resolved.refScript !== undefined
+)!;
+const lucidFeeOracleSrc = UTxOTolUtxo(feeOracleSource);
+//console.log("utxo with soure",lucidFeeOracleSrc);
 
-      const newFee = 30_000;
-      const collateralUtxos = await lucid.utxosAt(signerAddr.address);
-      const collateral = lutxoToUTxO(collateralUtxos[0]);
-      //console.log("collateral", collateralUtxos);
-      const ownerPkh = new Hash28(
-        lucid.utils.paymentCredentialOf(signerAddr.address).hash
-      );
-      const updateTx = await getFeeUpdateTxTest(
-        lucid,
-        new TxBuilder(await getProtocolParams()),
-        newFee,
-        ownerPkh,
-        collateral,
-        utxoWithNft,
-        feeOracleSource
-      );
+const newFee = 30_000;
+const collateralUtxos = await lucid.utxosAt(signerAddr.address);
+const collateral = lutxoToUTxO(collateralUtxos[0]);
+//console.log("collateral", collateralUtxos);
+const ownerPkh = new Hash28(
+  lucid.utils.paymentCredentialOf(signerAddr.address).hash
+);
+const updateTx = await getFeeUpdateTxTest(
+  lucid,
+  new TxBuilder(await getProtocolParams()),
+  newFee,
+  ownerPkh,
+  collateral,
+  utxoWithNft,
+  feeOracleSource
+);
 
-      const tx = lucid.fromTx(updateTx.toCbor().toString());
-      const txsigned = tx.sign().complete();
-      const txSubmit = (await txsigned).submit();
+const tx = lucid.fromTx(updateTx.toCbor().toString());
+const txsigned = tx.sign().complete();
+const txSubmit = (await txsigned).submit();
 
-      emulator.awaitBlock(20);
-    } catch (error) {
+emulator.awaitBlock(20);
+/*    } catch (error) {
       console.log(error);
     }
   }, 40_000);
 });
+*/
