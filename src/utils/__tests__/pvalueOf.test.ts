@@ -11,6 +11,8 @@ import {
   pair,
   PTokenName,
   ptraceInt,
+  ptraceBool,
+  bool,
 } from "@harmoniclabs/plu-ts";
 import { pvalueOf } from "../pvalueOf";
 
@@ -62,18 +64,18 @@ const pvalueTwoAssets = pfn(
 });
 
 test("pvalueOf applied to a singleton", () => {
-  const doStuff = pfn(
+  const checkQty = pfn(
     [bs, bs, int],
-    int
+    bool
   )((cs, tn, qty) => {
     const testVal = pvalueSingleton.$(cs).$(tn).$(qty);
     const resQty = pvalueOf.$(cs).$(tn).$(testVal);
-    return ptraceInt.$(resQty);
+    return ptraceBool.$(resQty.eq(qty));
   });
 
   console.log(
     Machine.eval(
-      doStuff
+      checkQty
         .$("00000000000000000000000000000000000000000000000000000000")
         .$("c0ffee")
         .$(10)
@@ -82,19 +84,18 @@ test("pvalueOf applied to a singleton", () => {
 });
 
 test("pvalueOf applied to a value with one symbol and two tokens", () => {
-  const doStuff = pfn(
+  const checkQty = pfn(
     [bs, bs, int, bs, int],
-    int
+    bool
   )((cs, tn0, qty0, tn1, qty1) => {
-    // const testVal = pvalueSingleton.$(cs).$(tn).$(qty);
     const testVal = pvalueTwoTokens.$(cs).$(tn0).$(qty0).$(tn1).$(qty1);
     const resQty = pvalueOf.$(cs).$(tn0).$(testVal);
-    return ptraceInt.$(resQty);
+    return ptraceBool.$(resQty.eq(qty0));
   });
 
   console.log(
     Machine.eval(
-      doStuff
+      checkQty
         .$("00000000000000000000000000000000000000000000000000000000")
         .$("c0ffee")
         .$(10)
@@ -105,18 +106,18 @@ test("pvalueOf applied to a value with one symbol and two tokens", () => {
 });
 
 test("pvalueOf applied to a value with two symbols with one tokens each", () => {
-  const doStuff = pfn(
+  const checkQty = pfn(
     [bs, bs, bs, int, int],
-    int
+    bool
   )((cs0, cs1, tn, qty0, qty1) => {
     const testVal = pvalueTwoAssets.$(cs0).$(cs1).$(tn).$(qty0).$(qty1);
     const resQty = pvalueOf.$(cs0).$(tn).$(testVal);
-    return ptraceInt.$(resQty);
+    return ptraceBool.$(resQty.eq(qty0));
   });
 
   console.log(
     Machine.eval(
-      doStuff
+      checkQty
         .$("00000000000000000000000000000000000000000000000000000000")
         .$("11111111111111111111111111111111111111111111111111111111")
         .$("c0ffee")
