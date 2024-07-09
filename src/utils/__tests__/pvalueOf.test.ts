@@ -22,14 +22,16 @@ const mkTokensAndQtys = pList(PTokenAndQty);
 
 const mkAssetClass = pPair(PCurrencySymbol.type, list(PTokenAndQty));
 
-const mkValue = pList(pair(PCurrencySymbol.type, list(PTokenAndQty)));
+const mkAssetClasses = pList(pair(PCurrencySymbol.type, list(PTokenAndQty)));
 
 const pvalueSingleton = pfn(
   [PCurrencySymbol.type, PTokenName.type, int],
   PValue.type
 )((cs, tn, qty) => {
   return PValue.from(
-    mkValue([mkAssetClass(cs, mkTokensAndQtys([mkTokenAndQty(tn, qty)]))])
+    mkAssetClasses([
+      mkAssetClass(cs, mkTokensAndQtys([mkTokenAndQty(tn, qty)])),
+    ])
   );
 });
 
@@ -38,7 +40,7 @@ const pvalueTwoTokens = pfn(
   PValue.type
 )((cs, tn0, qty0, tn1, qty1) => {
   return PValue.from(
-    mkValue([
+    mkAssetClasses([
       mkAssetClass(
         cs,
         mkTokensAndQtys([mkTokenAndQty(tn0, qty0), mkTokenAndQty(tn1, qty1)])
@@ -52,15 +54,9 @@ const pvalueTwoAssets = pfn(
   PValue.type
 )((cs0, cs1, tn, qty0, qty1) => {
   return PValue.from(
-    mkValue([
-      mkAssetClass(
-        cs0,
-        mkTokensAndQtys([mkTokenAndQty(tn, qty0)])
-      ),
-      mkAssetClass(
-        cs1,
-        mkTokensAndQtys([mkTokenAndQty(tn, qty1)])
-      ),
+    mkAssetClasses([
+      mkAssetClass(cs0, mkTokensAndQtys([mkTokenAndQty(tn, qty0)])),
+      mkAssetClass(cs1, mkTokensAndQtys([mkTokenAndQty(tn, qty1)])),
     ])
   );
 });
