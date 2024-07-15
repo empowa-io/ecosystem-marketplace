@@ -90,16 +90,12 @@ export const contract = pfn([
         // audit 08
         // inlined
         const singleInputFormSelf = (
-            plet(
-                _in.resolved.address.credential.peq
-            ).in( isOwnCreds => 
-                pisEmpty.$(
-                    tx.inputs.filter( _in => 
-                        isOwnCreds.$(
-                            _in.resolved.address.credential
-                        )
-                    )
-                )
+            pisEmpty.$(
+                // filter by script credentials only
+                // we don't care if the credentials are "own"
+                // because we are testing for a single script input overall
+                // so if this contract is running, is implicit the credentials are own
+                tx.inputs.filter( isInputFromScript ).tail
             )
         );
 
@@ -125,7 +121,8 @@ export const contract = pfn([
         const validOut = validOutDatum.and( validOutAddress )
 
         return singedBySeller
-        .and(  validOut );
+        .and(  validOut )
+        .and(  singleInputFormSelf );
     })
     .onBuy( _ => {
 
