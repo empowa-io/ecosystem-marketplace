@@ -10,7 +10,7 @@
     "envFolderPath_comment": [
         "folder that will be used by the various sub commands to generate files"
     ],
-    "envFolderPath": "./testnet",
+    "envFolderPath": "./local/testnet",
 
     "signer_comment": [
         "the 'signer' is the account that will be used to deploy the contracts",
@@ -24,7 +24,7 @@
         "if the account you intend to use has also staking part it is required to specify the full address"
     ],
     "signer": {
-        "skeyPath": "./secret_testnet/payment.skey",
+        "skeyPath": "./local/testnet/marketplace_deploy.skey",
         "vkeyPath": null,
         "address": null 
     },
