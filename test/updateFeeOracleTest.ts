@@ -1,4 +1,6 @@
+import { Data } from "@anastasia-labs/lucid-cardano-fork";
 import {
+  DataConstr,
   DataI,
   Tx,
   TxBuilder,
@@ -19,14 +21,29 @@ export async function getFeeUpdateTxTest(
 
   const nextDatum = new DataI(newFee);
 
+   const utxo = feeOracleInput;
+
+  return txBuilder.buildSync({
+    inputs: [{utxo}],
+    collaterals: [collateral],
+    outputs: [
+      {
+        address: feeOracleInput.resolved.address, //feeOracleAddr,
+        value: feeOracleInput.resolved.value,
+        datum: nextDatum,
+      },
+    ],
+    changeAddress: collateral.resolved.address,
+  });
+  /*
   return await txBuilder.build({
     inputs: [
       {
         utxo: feeOracleInput,
         referenceScriptV2: {
           refUtxo: feeOracleSource,
-          datum: "inline",
-          redeemer: nextDatum,
+          datum:"inline",
+         redeemer: Data.void(),
         },
       },
       { utxo: collateral },
@@ -40,7 +57,7 @@ export async function getFeeUpdateTxTest(
       },
     ],
     changeAddress: collateral.resolved.address,
-  });
+  });*/
 
 }
 

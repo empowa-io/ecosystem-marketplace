@@ -32,17 +32,17 @@ import {
         value: Value.sub(utxo.resolved.value, Value.lovelaces(5_000_000)),
       },
       outputs: [
-        {
+       /* {
           address: feeOracleAddr,
           value: Value.lovelaces(10_000_000),
           datum: new DataB(""), // invalid datum for the contract; always fails
           refScript: feeOracleSource,
-        },
+        },*/
         {
           address: feeOracleAddr,
           value: new Value([
             Value.singleAssetEntry(nftPolicy, tokenName, 1),
-            Value.lovelaceEntry(2_000_000),
+            Value.lovelaceEntry(5_000_000),
           ]),
           datum: new DataI(25_000), // 2,5% fee //inlineDatum //
         },

@@ -7,12 +7,15 @@ import {
 } from "../test/utils";
 import {
   Address,
+  DataI,
   PCurrencySymbol,
   PPubKeyHash,
   PTokenName,
   PaymentCredentials,
   PubKeyHash,
   TxBuilder,
+  UTxO,
+  Value,
   defaultProtocolParameters,
 } from "@harmoniclabs/plu-ts";
 import { getMintOneShotTestTx } from "../test/getMintOneShotTest";
@@ -23,6 +26,9 @@ import { test, describe } from "vitest";
 import { getDeployFeeOracleTestTx } from "../test/getDeployFeeOracleTest";
 import { getDeployFeeOracleWrongOutput } from "./getDeployFeeOracleWrongOutput.ts";
 import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts";
+import { getDeployFeeOracleValidTx } from "./getDeployFeeOracleValidInput.ts";
+import { getFeeUpdateValidTx } from "./updateFeeOracleValidInput.ts";
+import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
 
 
 //async function abstractTx(nonbeaconUtxo : boolean) : Promise<{ policyhash : Hash28 , utxo : UTxO[]; }> {
@@ -182,7 +188,7 @@ describe("FeeOracle - supplying a UTXo without NFT", () => {
       console.log(error);
     }
   });
-});
+},40_000);
 
 
 describe("FeeOracle - Trying to update the fee without providing reference script", () => {
@@ -222,10 +228,10 @@ describe("FeeOracle - Trying to update the fee without providing reference scrip
 
       const plutsUtxo = lutxoToUTxOArray(lucidUtxosAfterMint);
 
-      const utxoWithoutNft = plutsUtxo.find(
+      const utxoWithNft = plutsUtxo.find(
         (u) => u.resolved.value.get(policy, tokenName) === 1n
       )!;
-      const lutxo = UTxOTolUtxo(utxoWithoutNft);
+      const lutxo = UTxOTolUtxo(utxoWithNft);
       console.log("utxo with nft", lutxo);
       const paymentCred = lucid.utils.paymentCredentialOf(signerAddr.address);
       const publicKeyHash = new PubKeyHash(paymentCred.hash);
@@ -243,8 +249,8 @@ describe("FeeOracle - Trying to update the fee without providing reference scrip
 
       const offChainTxFeeOracle = await getDeployFeeOracleWrongOutput(
         new TxBuilder(await getProtocolParams()),
-        utxoWithoutNft,
-        utxoWithoutNft.resolved.address,
+        utxoWithNft,
+        utxoWithNft.resolved.address,
         feeOracleAddr,
         feeOracle,
         policy
@@ -263,9 +269,13 @@ describe("FeeOracle - Trying to update the fee without providing reference scrip
 
       const collateral = await lucid.utxosAt(signerAddr.address);
       const plutscollateral = lutxoToUTxO(collateral[0]);
+      console.log("collateral for update tx",plutscollateral);
+      
+     
       const feeOracleInput = feeoraclepluts.find(u=> u.resolved.value.get(policy,tokenName) === 1n )!;
+      console.log("Fee ORacle input",feeOracleInput);
       const feeOracleSource = feeoraclepluts.find( u => u.resolved.refScript !== undefined )!;
-      const updateTx = await getFeeUpdateTxTest(new TxBuilder(await getProtocolParams()),30000,plutscollateral,feeOracleInput,feeOracleInput);
+      const updateTx = await getFeeUpdateTxTest(new TxBuilder(await getProtocolParams()),30000,plutscollateral,feeOracleInput,feeOracleSource);
       const tobeSignedUpdateTx = lucid.fromTx(updateTx.toCbor().toString());
     
 
@@ -274,3 +284,98 @@ describe("FeeOracle - Trying to update the fee without providing reference scrip
     }
   });
 });
+
+
+  test("Fee Oracle - valid input", async () => {
+    try {
+      const signerAddr = await generateAccountSeedPhrase({
+        lovelace: 100_000_000n,
+      });
+
+      const emulator = new Emulator([signerAddr]);
+
+      const lucid = await Lucid.new(emulator);
+      lucid.selectWalletFromSeed(signerAddr.seedPhrase);
+      const initialUtxos = await lucid.wallet.getUtxos();
+      const refl = initialUtxos[0];
+      const ref = lutxoToUTxO(refl);
+      const oneShotMintTx = await getMintOneShotTestTx(
+        new TxBuilder(defaultProtocolParameters),
+        ref,
+        ref.resolved.address
+      );
+
+      const policy = oneShotMintTx.nftPolicySource.hash;
+
+      const tobeSignedTx = lucid.fromTx(oneShotMintTx.tx.toCbor().toString());
+
+      const signedLucidTx = await tobeSignedTx.sign().complete();
+      const nfttxHash = await signedLucidTx.submit();
+
+      emulator.awaitBlock(20);
+
+      console.log(
+        "Utxos after minting",
+        await lucid.utxosAt(signerAddr.address)
+      );
+      const lucidUtxosAfterMint = await lucid.utxosAt(signerAddr.address);
+
+      const plutsUtxo = lutxoToUTxOArray(lucidUtxosAfterMint);
+
+      const utxoWithNft = plutsUtxo.find(
+        (u) => u.resolved.value.get(policy, tokenName) === 1n
+      )!;
+      const lutxo = UTxOTolUtxo(utxoWithNft);
+      console.log("utxo with nft", lutxo);
+      const paymentCred = lucid.utils.paymentCredentialOf(signerAddr.address);
+      const publicKeyHash = new PubKeyHash(paymentCred.hash);
+
+      const feeOracle = makeFeeOracle(
+        PCurrencySymbol.from(policy.toBuffer()),
+        PTokenName.from(tokenName),
+        PPubKeyHash.from(publicKeyHash.toBuffer())
+      );
+
+      const feeOracleAddr = new Address(
+        "testnet",
+        PaymentCredentials.script(feeOracle.hash)
+      );
+
+      const offChainTxFeeOracle = await getDeployFeeOracleValidTx(
+        new TxBuilder(await getProtocolParams()),
+        utxoWithNft,
+        utxoWithNft.resolved.address,
+        feeOracleAddr,
+        feeOracle,
+        policy
+      );
+
+      const tobeSignedFeeOracleTx = offChainTxFeeOracle.toCbor();
+      const lucidFeeOracleTx = lucid.fromTx(tobeSignedFeeOracleTx.toString());
+      const signedLucidFeeOracleTx = await lucidFeeOracleTx.sign().complete();
+      const txHashFeeOracle = await signedLucidFeeOracleTx.submit();
+
+      emulator.awaitBlock(50);
+
+      const feeoracleutxos = await lucid.utxosAt(feeOracleAddr.toString());
+      const feeoraclepluts = lutxoToUTxOArray(feeoracleutxos);
+      console.log("FeeORacle Address", await lucid.utxosAt(feeOracleAddr.toString()));
+
+      const collateral = await lucid.utxosAt(signerAddr.address);
+      const plutscollateral = lutxoToUTxO(collateral[0]);
+      console.log("collateral for update tx",plutscollateral);
+      
+     
+      const feeOracleInput = feeoraclepluts.find(u=> u.resolved.value.get(policy,tokenName) === 1n )!;
+      console.log("Fee Oracle input",feeOracleInput);
+      const feeOracleSource = feeoraclepluts.find( u => u.resolved.refScript !== undefined )!;
+      console.log("fee oracle source", feeOracleSource);
+      //const updateTx = await getFeeUpdateTx(new TxBuilder(await getProtocolParams()),30000,policy,plutscollateral);
+      const updateTx = await getFeeUpdateValidTx(new TxBuilder(await getProtocolParams()),30000,plutscollateral,feeOracleInput,feeOracleSource);
+      const tobeSignedUpdateTx = lucid.fromTx(updateTx.toCbor().toString());
+    
+
+    } catch (error) {
+      console.log(error);
+    }
+  });
