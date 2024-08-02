@@ -5,12 +5,7 @@ import {
   OutputData,
   Tx as LTx,
 } from "@anastasia-labs/lucid-cardano-fork";
-import {
-  UTxOTolUtxo,
-  generateAccountSeedPhrase,
-  lutxoToUTxO,
-  lutxoToUTxOArray,
-} from "../test/utils";
+
 import {
   Address,
   DataI,
@@ -41,29 +36,16 @@ import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts";
 import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
 import { getMintOneShotTestTx } from "../test/getMintOneShotTest.ts";
 import { makeFeeOracleAndGetDeployTestTx } from "../test/makeFeeOracleAndGetDeployTest.ts";
-import {
-  Emulator,
-  Lucid,
-  generateAccountSeedPhrase,
-  BatchRequestConfig,
-  batchRequest,
-  fetchBatchRequestUTxOs,
-  BatchSwapConfig,
-  batchSwap,
-  PROTOCOL_PARAMETERS_DEFAULT,
-  getBatchVAs,
-  BatchVAs,
-  MIN_SYMBOL_PREPROD,
-  MIN_TOKEN_NAME,
-  ADA_MIN_LP_TOKEN_NAME_PREPROD,
-  toUnit,
-} from "../src/index.js";
 import { beforeEach, expect, test } from "vitest";
 import {
   LucidContext,
   initiateFeeOracle,
   FeeOracleInitiationOutcome,
-} from "../test/utils";
+  generateAccountSeedPhrase,
+  UTxOTolUtxo,
+  lutxoToUTxO,
+  lutxoToUTxOArray,
+} from "./utils.ts";
 
 // valid input and datum
 async function getFeeUpdateTx(
