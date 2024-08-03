@@ -4,7 +4,7 @@ import {
   generateAccountSeedPhrase,
   lutxoToUTxO,
   lutxoToUTxOArray,
-} from "../test/utils";
+} from "./utils.ts";
 import {
   Address,
   PCurrencySymbol,
@@ -15,9 +15,9 @@ import {
   TxBuilder,
   defaultProtocolParameters,
 } from "@harmoniclabs/plu-ts";
-import { getMintOneShotTestTx } from "../test/getMintOneShotTest";
-import { tokenName } from "../app/constants";
-import { makeFeeOracle } from "../src/contracts/feeOracle";
+import { getMintOneShotTestTx } from "./getMintOneShotTest.ts";
+import { tokenName } from "../app/constants.ts";
+import { makeFeeOracle } from "../src/contracts/feeOracle.ts";
 import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import { test, describe } from "vitest";
 import { getDeployFeeOracleTestTx } from "../test/getDeployFeeOracleTest";
