@@ -7,15 +7,12 @@ import {
 } from "../test/utils";
 import {
   Address,
-  DataI,
   PCurrencySymbol,
   PPubKeyHash,
   PTokenName,
   PaymentCredentials,
   PubKeyHash,
   TxBuilder,
-  UTxO,
-  Value,
   defaultProtocolParameters,
 } from "@harmoniclabs/plu-ts";
 import { getMintOneShotTestTx } from "../test/getMintOneShotTest";
@@ -28,7 +25,6 @@ import { getDeployFeeOracleWrongOutput } from "./getDeployFeeOracleWrongOutput.t
 import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts";
 import { getDeployFeeOracleValidTx } from "./getDeployFeeOracleValidInput.ts";
 import { getFeeUpdateValidTx } from "./updateFeeOracleValidInput.ts";
-import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
 
 
 //async function abstractTx(nonbeaconUtxo : boolean) : Promise<{ policyhash : Hash28 , utxo : UTxO[]; }> {
@@ -142,15 +138,18 @@ describe("FeeOracle - supplying a UTXo without NFT", () => {
         "Utxos after minting",
         await lucid.utxosAt(signerAddr.address)
       );
-      const lucidUtxosAfterMint = await lucid.utxosAt(signerAddr.address);
 
-      const plutsUtxo = lutxoToUTxOArray(lucidUtxosAfterMint);
+      const lucidUtxosAfterMint = await lucid.wallet.getUtxos();
 
-      const utxoWithoutNft = plutsUtxo.find(
+      const plutsUtxos = lutxoToUTxOArray(lucidUtxosAfterMint);
+
+      const utxosWithoutNft = plutsUtxos.filter(
         (u) => u.resolved.value.get(policy, tokenName) !== 1n
       )!;
-      const lutxo = UTxOTolUtxo(utxoWithoutNft);
+
+      const lutxo = UTxOTolUtxo(utxosWithoutNft[0]);
       console.log("utxo without nft", lutxo);
+
       const paymentCred = lucid.utils.paymentCredentialOf(signerAddr.address);
       const publicKeyHash = new PubKeyHash(paymentCred.hash);
 
@@ -190,8 +189,11 @@ describe("FeeOracle - supplying a UTXo without NFT", () => {
   });
 },40_000);
 
-
-describe("FeeOracle - Trying to update the fee without providing reference script", () => {
+// Cardano ledger rules enforce the presence of a reference script for script execution
+// If a transaction attempts to execute a script without providing the necessary reference script,
+// It will fail at the ledger level before reaching the script's logic
+// Rather than specific Fee Oracle logic it still can be used to verify the off-chain code, if it is correctly including the reference script in the transaction
+describe("FeeOracle - Trying to update the fee without providing reference script", () => { 
   test("Fee Oracle - supplying feeoracle input UTxo intead of feeoracle reference script", async () => {
     try {
       const signerAddr = await generateAccountSeedPhrase({

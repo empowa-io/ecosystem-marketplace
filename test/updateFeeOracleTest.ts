@@ -6,11 +6,10 @@ import {
   TxBuilder,
   UTxO,
 } from "@harmoniclabs/plu-ts";
+import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 
 // valid input and datum
-export async function getFeeUpdateTxTest(
- // lucid: Lucid,
-  txBuilder: TxBuilder,
+export async function getFeeUpdateTx(
   newFee: number,
   //ownerPkh: Hash28,
   collateral: UTxO,
@@ -19,10 +18,11 @@ export async function getFeeUpdateTxTest(
   // feeOracleAddr : Address
 ): Promise<Tx> {
 
+  const txBuilder = new TxBuilder(await getProtocolParams());
   const nextDatum = new DataI(newFee);
+  const utxo = feeOracleInput;
 
-   const utxo = feeOracleInput;
-
+  const initialInputs =
   return txBuilder.buildSync({
     inputs: [{utxo}],
     collaterals: [collateral],

@@ -4,12 +4,14 @@ import {
   ScriptType as LScriptType,
   UTxO as LUTxO,
   Assets as LAssets,
-  valueToAssets,
   generateSeedPhrase,
+  Data,
+  Emulator,
   Lucid,
 } from "@anastasia-labs/lucid-cardano-fork";
 import {
   Address,
+  Hash28,
   dataFromCbor,
   Hash32,
   IUTxO,
@@ -18,50 +20,21 @@ import {
   LitteralScriptType,
   UTxO,
   Value,
-  Hash28,
-  IValue,
   DataI,
   DataB,
   Tx,
-} from "@harmoniclabs/plu-ts";
-
-import {
-  assetsToValue,
-  Script as LScript,
-  ScriptType as LScriptType,
-  UTxO as LUTxO,
-  Assets as LAssets,
-  valueToAssets,
-  generateSeedPhrase,
-  Lucid,
-} from "@anastasia-labs/lucid-cardano-fork";
-
-import {
-  Data,
-  Emulator,
-  Lucid,
-  OutputData,
-} from "@anastasia-labs/lucid-cardano-fork";
-import {
-  Address,
-  Hash28,
-  PAddress,
   PCurrencySymbol,
   PPubKeyHash,
   PTokenName,
   PaymentCredentials,
   PubKeyHash,
-  Script,
   TxBuilder,
-  UTxO,
   ITxBuildInput,
 } from "@harmoniclabs/plu-ts";
 import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
 import { tokenName } from "../app/constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { getProtocolParams } from "../app/utils/getProtocolParams";
-import { getDeployFeeOracleTestTx } from "./-OLD-getDeployFeeOracleTest";
-import { UTxOTolUtxo } from "./utils";
 
 export type LucidContext = {
   lucid: Lucid;
@@ -81,8 +54,8 @@ export interface FeeOracleInitiationOutcome {
   feeOracleAddr: Address;
 }
 
-// initialSetup is an abstract function to be used for setting up the initial state of the marketplace, deploying the fee oracle
-// and minting the NFT to be able to use the UTxOs in our testing
+// The initiateFeeOracle is an abstract function to be used for setting up the initial state of the blockchain in the emulator. 
+// It initializes the Fee Oracle, including minting an NFT (create a UTxOs) and deploying the Fee Oracle contract
 export async function initiateFeeOracle(
   emulator: Emulator,
   lucid: Lucid,
@@ -93,39 +66,41 @@ export async function initiateFeeOracle(
   lucid.selectWalletFromSeed(signerSeedPhrase);
   const signerAddr = await lucid.wallet.address();
 
-  // Get initial utxos and prepare for minting
+  // Retrieve the signer's UTxOs and convert the first one to a plu-ts UTxO format
   const initialUTxOs = await lucid.wallet.getUtxos();
   const refLUTxO = initialUTxOs[0];
   const refUTxO = lutxoToUTxO(refLUTxO);
 
-  // Mint the oneshot NFT
+  // Create a transaction to mint a single NFT (one-shot minting)
   const oneShotMintTx = await getMintOneShotTx(
     new TxBuilder(await getProtocolParams()),
     refUTxO,
     refUTxO.resolved.address
   );
-  const feeOracleNftPolicyHash = oneShotMintTx.nftPolicySource.hash; // change type of policy to Hash28 so it can be used in the listNFT test
+  const feeOracleNftPolicyHash = oneShotMintTx.nftPolicySource.hash; // change type of NFT policy to Hash28 so it can be used in the Plu-ts format for test transaction
 
-  // Sign and submit the minting transaction,sent back to Signer
+  // Sign and submit the minting transaction 
   const unsignedOneShotMintTx = lucid.fromTx(
     oneShotMintTx.tx.toCbor().toString()
   );
   const signedOneShotMintTx = await unsignedOneShotMintTx.sign().complete();
   const oneShotMintTxHash = await signedOneShotMintTx.submit();
-  console.log("NFT Tx Hash", oneShotMintTxHash);
+  //console.log("NFT Tx Hash", oneShotMintTxHash);
 
   // Wait for the transaction
   emulator.awaitBlock(50);
 
-  //console.log("Utxos after minting", await lucid.utxosAt(signerAddr.address));
+  //console.log("Utxos at signer addr Utxos after minting", await lucid.utxosAt(signerAddr.address)); // Minted nft is present in the UTxO
 
   // Find the UTxO containing the minted NFT
+  // It has been converted into plu-ts format from Lucid utilizing conversion functions
   const lutxosAfterMint = await lucid.wallet.getUtxos();
-  const utxosAfterMint = lutxosAfterMint.map(lutxoToUTxO);
-  const beaconUTxO = utxosAfterMint.find(
+  const utxosAfterMint = lutxosAfterMint.map(lutxoToUTxO); 
+  const beaconUTxO = utxosAfterMint.find( // Assuming multiple UTxOs are present, we find the one with the NFT
     (u) => u.resolved.value.get(feeOracleNftPolicyHash, tokenName) === 1n
-  )!; // I need to use this beaconUTxO to use on Listing action since it has has the NFT and it has been converted into pluts format from Lucid format
-  console.log("UTxO with NFT", beaconUTxO);
+  )!; 
+  //console.log("UTxO with NFT", beaconUTxO);
+  // Use this beaconUTxO, which contains the minted NFT to be able to set the marketplace fee.
 
   // Prepare for Fee Oracle deployment
   const ownerPaymentCredential = lucid.utils.paymentCredentialOf(signerAddr); //owner address
@@ -141,18 +116,17 @@ export async function initiateFeeOracle(
   // Generate the Fee Oracle address
   const feeOracleAddr = new Address(
     "testnet",
-    //cfg.network === "mainnet" ? "mainnet" : "testnet", // the config file is not needed as we can take inputs from our own emulator. Its a setup
     PaymentCredentials.script(feeOracleScript.hash)
   );
 
   // Index[0] -> UTxO with Reference Script
   // Index[1] -> Beacon UTxO
-  // Index[2] -> Unauthentic UTxO
+  // Index[2] -> Unauthentic UTxO, seen on produceUnauthenticUTxO
   const initialDeploymentTxOutputs = [
     {
       address: feeOracleAddr,
       value: Value.lovelaces(10_000_000),
-      datum: new DataB(""), // invalid datum for the contract; always fails
+      datum: new DataB(""), // invalid datum for the contract; always fails an empty byte string
       refScript: feeOracleScript,
     },
     {
@@ -161,24 +135,28 @@ export async function initiateFeeOracle(
         Value.singleAssetEntry(feeOracleNftPolicyHash, tokenName, 1),
         Value.lovelaceEntry(2_000_000),
       ]),
-      datum: new DataI(25_000), // 2,5% fee //inlineDatum //
+      datum: new DataI(25_000), // 2,5% fee
     },
   ];
 
-  // const tempList = initialDeploymentTxOutputs
-  // const tempList2 = [...initialDeploymentTxOutputs]
-  // Ternary operator "?" is used to check if the produceUnauthenticUTxO is true or false if thats the case then we add an additional
-  // output to the transaction which would be an adversary setting fee to 0%,  "..." is used to copy the initialDeploymentTxOutputs and add the new output
+  // Optionally add an unauthentic UTxO to the initial deployment transaction that tries to set the marketplace fee to 0%
   const deploymentTxOutputs = produceUnauthenticUTxO
     ? [
-        ...initialDeploymentTxOutputs,
+        ...initialDeploymentTxOutputs,  
         {
           address: feeOracleAddr,
           value: new Value([Value.lovelaceEntry(2_000_000)]),
-          datum: new DataI(0),
+          datum: new DataI(0), // An 
         },
       ]
     : initialDeploymentTxOutputs;
+  // Example on how "..." is used to copy the initialDeploymentTxOutputs and add the new output
+  // const tempList = initialDeploymentTxOutputs
+  // const tempList2 = [...initialDeploymentTxOutputs]
+  // Ternary operator "?" is used to check if the produceUnauthenticUTxO is true or false. If true then we add an additional
+  // output to the transaction, which would be a case for an adversary setting marketplace fee to 0%
+  
+  // Build the Fee Oracle deployment transaction
   const initialDeploymentTx = new TxBuilder(await getProtocolParams());
   const feeOracleDeploymentTx = initialDeploymentTx.buildSync({
     inputs: [{ utxo: beaconUTxO }],
@@ -191,7 +169,7 @@ export async function initiateFeeOracle(
     changeAddress: Address.fromString(signerAddr),
   });
 
-  // Sign and submit the Fee Oracle deployment transaction //has to be present in the transaction as a reference
+  // Sign and submit the Fee Oracle deployment transaction 
   const feeOracleDeploymentTxCBOR = feeOracleDeploymentTx.toCbor();
   const unsignedFeeOracleDeploymentTx = lucid.fromTx(
     feeOracleDeploymentTxCBOR.toString()
@@ -200,23 +178,98 @@ export async function initiateFeeOracle(
     .sign()
     .complete();
   const feeOracleDeploymentTxHash = await signedFeeOracleDeploymentTx.submit();
-  console.log("Fee Oracle Deployment Tx Hash", feeOracleDeploymentTxHash);
+  //console.log("Fee Oracle Deployment Tx Hash", feeOracleDeploymentTxHash);
+  // This has to be present in the transaction as a reference
 
   emulator.awaitBlock(50);
-  //console.log("utxos at signer addr initialSetup", await lucid.utxosAtWithUnit(signerAddr.address, "lovelace"));
-  //console.log("utxos at feeOracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
+
+  //console.log("utxos at signer addr initialSetup", await lucid.wallet.getUtxos());
+ 
 
   // Get the final state of the Fee Oracle UTxOs
   const feeOracleLUTxOs = await lucid.utxosAt(feeOracleAddr.toString());
   const feeOracleUTxOs = feeOracleLUTxOs.map(lutxoToUTxO);
-
   //console.log("Fee oracle addr with one more tx", await lucid.getUtxos());
+  //console.log("utxos at feeOracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
+
   return {
     feeOracleNftPolicyHash,
     feeOracleUTxOs,
     feeOracleScript, // UTxO [0] is the UTxO with the reference script
     ownerPublicKeyHash,
     feeOracleAddr,
+  };
+}
+
+export interface MarketplaceInitiationOutcome {
+
+  // Populate with relevant parameters
+  
+  }
+
+// The initiateMarketplace is an abstract function to be used for setting up the initial state of the marketplace. 
+// It creates the marketplace address, creates and deploys the marketplace Contract
+export async function initiateMarketplace(
+  emulator: Emulator,
+  lucid: Lucid,
+  signerSeedPhrase: string,
+  ownerSeedPhrase: string, 
+  feeOracleInitiation: FeeOracleInitiationOutcome // To-Do: Integrate FeeOracleInitiation Outcome before "initiateMarketplace"
+): Promise<MarketplaceInitiationOutcome> {  // To-Do: Define the MarketplaceInitiationOutcome interface according to the needs
+  // Select the signer's wallet
+  lucid.selectWalletFromSeed(signerSeedPhrase);
+  const signerAddr = await lucid.wallet.address();
+
+  // Create the marketplace address
+  const utxo = (await lucid.utxosAt(signerAddr))[0];
+  const inputUtxo = lutxoToUTxO(utxo);
+
+  // Use the fee oracle initiation outcome instead of 'abstractTx'
+  const { feeOracleNftPolicyHash } = feeOracleInitiation;
+
+  // Create the marketplace contract
+  const marketplace = makeMarketplace( // Define this contract via src/contracts/marketplace.ts
+    PCurrencySymbol.from(""),
+    PTokenName.from(""),
+    PAddress.fromData(pData(Address.fromString(signerAddr).toData())),
+    PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()),
+    PTokenName.from(tokenName)
+  );
+
+  // Generate the marketplace address
+  const marketplaceAddr = new Address(
+    "testnet",
+    PaymentCredentials.script(marketplace.hash)
+  );
+  //console.log("Marketplace Address",marketplaceAddr.toString());
+
+  // Switch to the owner's wallet
+  lucid.selectWalletFromSeed(ownerSeedPhrase);
+  const ownerAddr = await lucid.wallet.address();
+  const ownerUtxos = await lucid.wallet.getUtxos();
+  const ownerUtxo = ownerUtxos[0];
+
+  // Sign and submit the marketplace deployment transaction
+  const deployMarketplaceTx = await getDeployMarketplaceTestTx( // Define this transaction via app/txns/marketplace/getDeployMarketplaceTx.ts
+    new TxBuilder(await getProtocolParams()),
+    lutxoToUTxO(ownerUtxo),
+    Address.fromString(ownerAddr),
+    marketplaceAddr,
+    marketplace
+  );
+  const tobeSignedMarketplaceTx = deployMarketplaceTx.toCbor();
+  const marketplaceTx = lucid.fromTx(tobeSignedMarketplaceTx.toString());
+  const signedmarketplaceTx = await marketplaceTx.sign().complete();
+  const txHashMarketplace = await signedmarketplaceTx.submit();
+
+  emulator.awaitBlock(20);
+  //console.log("Utxos at Marketplace Address", await lucid.utxosAt(marketplaceAddr.toString()));
+
+  // Return the relevant information
+  return {
+    marketplaceAddr,
+    marketplaceScript: marketplace,
+    deploymentTxHash: txHashMarketplace
   };
 }
 
@@ -343,9 +396,6 @@ export const generateAccountSeedPhrase = async (assets: LAssets) => {
     assets,
   };
 };
-
-// AbstractTx -> "initialSetup" function, will be used as a utility function under utils.ts and called during marketplace.test.ts
-// we will deploy marketplace in first "abstract function" than deploy fee oracle seperately
 
 // valid input and datum
 export async function getFeeUpdateTx(

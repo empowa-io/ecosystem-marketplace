@@ -1,54 +1,32 @@
 import {
-  Data,
   Emulator,
   Lucid,
-  OutputData,
   Tx as LTx,
 } from "@anastasia-labs/lucid-cardano-fork";
 
 import {
-  Address,
   DataI,
   DataB,
-  Hash28,
-  PCurrencySymbol,
-  PPubKeyHash,
-  PTokenName,
-  PTxOutRef,
-  PaymentCredentials,
-  PubKeyHash,
-  Script,
   TxBuilder,
   Tx,
   UTxO,
-  defaultProtocolParameters,
-  pData,
 } from "@harmoniclabs/plu-ts";
-import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy";
-import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
-import { tokenName } from "../app/constants";
-import { feeOracle, makeFeeOracle } from "../src/contracts/feeOracle";
-import { tryGetMarketplaceConfig } from "../app/utils/tryGetMarketplaceConfig";
-import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
-import { beforeEach, test, describe } from "vitest";
-import { getDeployFeeOracleTestTx } from "./getDeployFeeOracleTest.ts";
-import { getFeeUpdateTxTest } from "./updateFeeOracleTest.ts";
-import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
-import { getMintOneShotTestTx } from "../test/getMintOneShotTest.ts";
-import { makeFeeOracleAndGetDeployTestTx } from "../test/makeFeeOracleAndGetDeployTest.ts";
-import { beforeEach, expect, test } from "vitest";
+
 import {
   LucidContext,
   initiateFeeOracle,
   FeeOracleInitiationOutcome,
   generateAccountSeedPhrase,
-  UTxOTolUtxo,
   lutxoToUTxO,
-  lutxoToUTxOArray,
 } from "./utils.ts";
+
+import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
+import { beforeEach, test } from "vitest";
+import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
 
 // valid input and datum
 async function getFeeUpdateTx(
+  //ARGUMENTS
   // lucid: Lucid,
   newFee: number,
   //ownerPkh: Hash28,
@@ -78,11 +56,11 @@ async function getFeeUpdateTx(
     : initialInputs;
 
   return txBuilder.buildSync({
-    inputs,
+    inputs, // beacon UTxO that is being spent
     collaterals: [collateral],
     outputs: [
       {
-        address: feeOracleInput.resolved.address, //feeOracleAddr,
+        address: feeOracleInput.resolved.address, //UTxO sitting at the feeOracleAddr try to get this to adversary wallet
         value: feeOracleInput.resolved.value,
         datum: updatedDatum,
       },
@@ -91,7 +69,7 @@ async function getFeeUpdateTx(
   });
 }
 
-//NOTE: INITIALIZE EMULATOR + ACCOUNTS
+//Initialize users and emulator 
 beforeEach<LucidContext>(async (context) => {
   const createUser = async () => {
     return await generateAccountSeedPhrase({ lovelace: BigInt(100_000_000) });
@@ -119,7 +97,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     const ownersFirstLUTxO = ownerUTxOs[0];
     const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
 
-    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome = 
       await initiateFeeOracle(emulator, lucid, users.owner, false);
 
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
@@ -143,3 +121,12 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     // Wait for the transaction
     emulator.awaitBlock(50);
   };
+
+
+// test<LucidContext>("Test - Invalid Update Fee Oracle"),
+// spend fee oracle UTxo that should not be spendable, return it to adversary wallet take
+// the reproduced UTxO at the fee oracle address and try to spend it with inputting the wrong datum
+// output field of FeeOracle UTxO should be the adversary wallet for attack
+// take this as an argument for getFeeUpdateTx
+// add an argument to getFeeUpdateTx called destination Address for customizability of the function (so that we can customize
+// it for our sad path test)
