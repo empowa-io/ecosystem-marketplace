@@ -22,7 +22,7 @@ import {
 
 import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import { beforeEach, test } from "vitest";
-import { getFeeUpdateTx } from "../app/updateFeeOracle.ts";
+import { getFeeUpdateTx } from "./utils.ts";
 
 // valid input and datum
 async function getFeeUpdateTx(
@@ -81,7 +81,7 @@ beforeEach<LucidContext>(async (context) => {
 
   context.emulator = new Emulator([
     context.users.owner,
-    context.users.adversary,
+    context.users.adversary, //use this user profile for the unhappy test path, adversary setting marketplace fee to 0% without having the Beacon UTxO
   ]);
 
   context.lucid = await Lucid.new(context.emulator);

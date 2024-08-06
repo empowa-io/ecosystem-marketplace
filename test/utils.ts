@@ -146,7 +146,7 @@ export async function initiateFeeOracle(
         {
           address: feeOracleAddr,
           value: new Value([Value.lovelaceEntry(2_000_000)]),
-          datum: new DataI(0), // An 
+          datum: new DataI(0), // An adversary trying to set the marketplace fee to 0%?
         },
       ]
     : initialDeploymentTxOutputs;
@@ -200,6 +200,28 @@ export async function initiateFeeOracle(
     feeOracleAddr,
   };
 }
+// valid input and datum
+export async function getFeeUpdateTx(
+  newFee: number,
+  collateralUTxO: UTxO,
+  feeOracleInput: ITxBuildInput
+  //feeOracleAddr : Address
+): Promise<Tx> {
+  const txBuilder = new TxBuilder(await getProtocolParams());
+  const nextDatum = new DataI(newFee);
+  return txBuilder.buildSync({
+    inputs: [feeOracleInput],
+    collaterals: [collateralUTxO],
+    outputs: [
+      {
+        address: feeOracleUTxO.resolved.address, //feeOracleAddr,
+        value: feeOracleUTxO.resolved.value,
+        datum: nextDatum,
+      },
+    ],
+    changeAddress: collateralUTxO.resolved.address,
+  });
+}
 
 export interface MarketplaceInitiationOutcome {
 
@@ -209,6 +231,7 @@ export interface MarketplaceInitiationOutcome {
 
 // The initiateMarketplace is an abstract function to be used for setting up the initial state of the marketplace. 
 // It creates the marketplace address, creates and deploys the marketplace Contract
+// Build it resembling plu-ts version: app/deployMarkeplace.ts / lucid version : test/marketplaceold.test.ts
 export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
@@ -397,25 +420,4 @@ export const generateAccountSeedPhrase = async (assets: LAssets) => {
   };
 };
 
-// valid input and datum
-export async function getFeeUpdateTx(
-  newFee: number,
-  collateralUTxO: UTxO,
-  feeOracleInput: ITxBuildInput
-  //feeOracleAddr : Address
-): Promise<Tx> {
-  const txBuilder = new TxBuilder(await getProtocolParams());
-  const nextDatum = new DataI(newFee);
-  return txBuilder.buildSync({
-    inputs: [feeOracleInput],
-    collaterals: [collateralUTxO],
-    outputs: [
-      {
-        address: feeOracleUTxO.resolved.address, //feeOracleAddr,
-        value: feeOracleUTxO.resolved.value,
-        datum: nextDatum,
-      },
-    ],
-    changeAddress: collateralUTxO.resolved.address,
-  });
-}
+
