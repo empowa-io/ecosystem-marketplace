@@ -34,6 +34,7 @@ import {
 import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
 import { tokenName } from "../app/constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
+import { makeMarketplace } from "../src/contracts/marketplace";
 import { getProtocolParams } from "../app/utils/getProtocolParams";
 
 export type LucidContext = {
@@ -77,7 +78,7 @@ export async function initiateFeeOracle(
     refUTxO,
     refUTxO.resolved.address
   );
-  const feeOracleNftPolicyHash = oneShotMintTx.nftPolicySource.hash; // change type of NFT policy to Hash28 so it can be used in the Plu-ts format for test transaction
+  const feeOracleNftPolicyHash = oneShotMintTx.nftPolicySource.hash;
 
   // Sign and submit the minting transaction 
   const unsignedOneShotMintTx = lucid.fromTx(
@@ -200,28 +201,6 @@ export async function initiateFeeOracle(
     feeOracleAddr,
   };
 }
-// valid input and datum
-export async function getFeeUpdateTx(
-  newFee: number,
-  collateralUTxO: UTxO,
-  feeOracleInput: ITxBuildInput
-  //feeOracleAddr : Address
-): Promise<Tx> {
-  const txBuilder = new TxBuilder(await getProtocolParams());
-  const nextDatum = new DataI(newFee);
-  return txBuilder.buildSync({
-    inputs: [feeOracleInput],
-    collaterals: [collateralUTxO],
-    outputs: [
-      {
-        address: feeOracleUTxO.resolved.address, //feeOracleAddr,
-        value: feeOracleUTxO.resolved.value,
-        datum: nextDatum,
-      },
-    ],
-    changeAddress: collateralUTxO.resolved.address,
-  });
-}
 
 export interface MarketplaceInitiationOutcome {
 
@@ -237,62 +216,70 @@ export async function initiateMarketplace(
   lucid: Lucid,
   signerSeedPhrase: string,
   ownerSeedPhrase: string, 
-  feeOracleInitiation: FeeOracleInitiationOutcome // To-Do: Integrate FeeOracleInitiation Outcome before "initiateMarketplace"
 ): Promise<MarketplaceInitiationOutcome> {  // To-Do: Define the MarketplaceInitiationOutcome interface according to the needs
-  // Select the signer's wallet
+  
+  // Select the signer's wallet who will be deploying the marketplace contract
   lucid.selectWalletFromSeed(signerSeedPhrase);
   const signerAddr = await lucid.wallet.address();
 
-  // Create the marketplace address
-  const utxo = (await lucid.utxosAt(signerAddr))[0];
-  const inputUtxo = lutxoToUTxO(utxo);
+  // Retrieve the signer's UTxOs and convert the first one to a plu-ts UTxO format to be used for marketplace deployment
+  const initialUTxOs = await lucid.wallet.getUtxos();
+  const marketplaceRefLUTxO = initialUTxOs[0];
+  const marketplaceRefUTxO = lutxoToUTxO(marketplaceRefLUTxO);
 
-  // Use the fee oracle initiation outcome instead of 'abstractTx'
-  const { feeOracleNftPolicyHash } = feeOracleInitiation;
+  // Get the feeOracleNFTPolicyHash from the Fee Oracle initiation outcome to be used as PCurrencySymbol in the marketplace contract
+  // FeeOracleInitiationOutcome.feeOracleNftPolicyHash 
 
   // Create the marketplace contract
-  const marketplace = makeMarketplace( // Define this contract via src/contracts/marketplace.ts
-    PCurrencySymbol.from(""),
-    PTokenName.from(""),
-    PAddress.fromData(pData(Address.fromString(signerAddr).toData())),
-    PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()),
-    PTokenName.from(tokenName)
+  const marketplaceScript = makeMarketplace( // Define this contract via src/contracts/marketplace.ts, app/txns/marketplace/makeMarketplaceAndGetDeployTx.ts, app/txns/marketplace/getDeployMarketplaceTx.ts
+    PCurrencySymbol.from(""), //in plu-ts its "PCurrencySymbol.from( cfg.paymentAsset.policy.toString() )""
+    PTokenName.from(""), //in plu-ts PTokenName.from( cfg.paymentAsset.tokenName ),
+    PAddress.fromData(pData(Address.fromString(signerAddr).toData())), //owner of the marketplace
+    PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()), // oracleNFTSymbol
+    PTokenName.from(tokenName) // oracleNFTname
   );
 
   // Generate the marketplace address
   const marketplaceAddr = new Address(
     "testnet",
-    PaymentCredentials.script(marketplace.hash)
+    PaymentCredentials.script(marketplaceScript.hash)
   );
   //console.log("Marketplace Address",marketplaceAddr.toString());
 
-  // Switch to the owner's wallet
-  lucid.selectWalletFromSeed(ownerSeedPhrase);
-  const ownerAddr = await lucid.wallet.address();
-  const ownerUtxos = await lucid.wallet.getUtxos();
-  const ownerUtxo = ownerUtxos[0];
+  //Build the Marketplace deployment transaction
+  const marketplaceDeploymentOutputs = [
+    {
+      address: marketplaceAddr,
+      value: Value.lovelaces(10_000_000),
+      datum: new DataB(""), // invalid datum for the contract; always fails an empty byte string
+      refScript: marketplaceScript,
+    },
+  ];
 
-  // Sign and submit the marketplace deployment transaction
-  const deployMarketplaceTx = await getDeployMarketplaceTestTx( // Define this transaction via app/txns/marketplace/getDeployMarketplaceTx.ts
-    new TxBuilder(await getProtocolParams()),
-    lutxoToUTxO(ownerUtxo),
-    Address.fromString(ownerAddr),
-    marketplaceAddr,
-    marketplace
-  );
-  const tobeSignedMarketplaceTx = deployMarketplaceTx.toCbor();
-  const marketplaceTx = lucid.fromTx(tobeSignedMarketplaceTx.toString());
-  const signedmarketplaceTx = await marketplaceTx.sign().complete();
-  const txHashMarketplace = await signedmarketplaceTx.submit();
+  const MarketplaceDeploymentTxBuilder = new TxBuilder(await getProtocolParams());
+  const marketplaceDeploymentTx = MarketplaceDeploymentTxBuilder.buildSync({
+    inputs: [{ utxo: marketplaceRefUTxO }],
+    outputs: marketplaceDeploymentOutputs,
+    changeAddress: Address.fromString(signerAddr),
+  });
 
-  emulator.awaitBlock(20);
+  const marketplaceDeploymentTxCBOR = marketplaceDeploymentTx.toCbor();
+  const unsignedMarketplaceDeploymentTx = lucid.fromTx(marketplaceDeploymentTxCBOR.toString());
+  const signedmarketplaceTx = await unsignedMarketplaceDeploymentTx.sign().complete();
+  const marketplaceDeploymentTxHash = await signedmarketplaceTx.submit();
+
+  emulator.awaitBlock(50);
   //console.log("Utxos at Marketplace Address", await lucid.utxosAt(marketplaceAddr.toString()));
+
+  // Get the final state of the Marketplace UTxOs
+  const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddr.toString());
+  const marketplaceUTxOs = marketplaceLUTxOs.map(lutxoToUTxO);
 
   // Return the relevant information
   return {
     marketplaceAddr,
-    marketplaceScript: marketplace,
-    deploymentTxHash: txHashMarketplace
+    marketplaceUTxOs,
+    marketplaceScript,
   };
 }
 

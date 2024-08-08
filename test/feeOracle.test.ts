@@ -1,16 +1,6 @@
-import {
-  Emulator,
-  Lucid,
-  Tx as LTx,
-} from "@anastasia-labs/lucid-cardano-fork";
+import { Emulator, Lucid, Tx as LTx } from "@anastasia-labs/lucid-cardano-fork";
 
-import {
-  DataI,
-  DataB,
-  TxBuilder,
-  Tx,
-  UTxO,
-} from "@harmoniclabs/plu-ts";
+import { DataI, DataB, TxBuilder, Tx, UTxO } from "@harmoniclabs/plu-ts";
 
 import {
   LucidContext,
@@ -22,14 +12,12 @@ import {
 
 import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import { beforeEach, test } from "vitest";
-import { getFeeUpdateTx } from "./utils.ts";
+
 
 // valid input and datum
 async function getFeeUpdateTx(
   //ARGUMENTS
-  // lucid: Lucid,
   newFee: number,
-  //ownerPkh: Hash28,
   collateral: UTxO,
   feeOracleInput: UTxO,
   feeOracleSource: UTxO,
@@ -42,7 +30,7 @@ async function getFeeUpdateTx(
 
   const initialInputs = [
     {
-      utxo: feeOracleInput,
+      utxo: feeOracleInput, // beacon UTxO with NFT that is being spent
       referenceScriptV2: {
         refUtxo: feeOracleSource,
         datum: "inline",
@@ -69,7 +57,7 @@ async function getFeeUpdateTx(
   });
 }
 
-//Initialize users and emulator 
+//Initialize users and emulator
 beforeEach<LucidContext>(async (context) => {
   const createUser = async () => {
     return await generateAccountSeedPhrase({ lovelace: BigInt(100_000_000) });
@@ -97,7 +85,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     const ownersFirstLUTxO = ownerUTxOs[0];
     const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
 
-    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome = 
+    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
       await initiateFeeOracle(emulator, lucid, users.owner, false);
 
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
@@ -121,7 +109,6 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     // Wait for the transaction
     emulator.awaitBlock(50);
   };
-
 
 // test<LucidContext>("Test - Invalid Update Fee Oracle"),
 // spend fee oracle UTxo that should not be spendable, return it to adversary wallet take

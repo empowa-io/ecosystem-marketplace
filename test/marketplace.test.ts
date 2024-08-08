@@ -1,8 +1,3 @@
-import { tokenName } from "../app/constants";
-import { testListNFT } from "./testListNFT.ts";
-import { test, describe, beforeAll } from "vitest";
-import { initialSetup, SetupResult } from "./utils";
-import { makeMarketplace } from "../src/contracts/marketplace";
 import {
   Address,
   PAddress,
@@ -11,6 +6,9 @@ import {
   PaymentCredentials,
   pData,
 } from "@harmoniclabs/plu-ts";
+import { testListNFT } from "./testListNFT.ts";
+import { test, describe, beforeAll } from "vitest";
+import { makeMarketplace } from "../src/contracts/marketplace";
 import { tokenName } from "../app/constants";
 import { getProtocolParams } from "../app/utils/getProtocolParams";
 
