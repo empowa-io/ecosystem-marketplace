@@ -4,7 +4,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
+    "test": "jest",
+    "test-al": "vitest run",
     "build": "tsc -p ./tsconfig.json && tsc-alias -p ./tsconfig.json",
     "tokenNameToHex": "npm run --silent build && node dist/app/utils/getTokenNameHex.js",
     "marketplace:deployAll": "npm run build && node dist/app/deployAll.js",
@@ -40,5 +41,6 @@
     "tsc-alias": "^1.7.1",
     "typescript": "^4.8.4",
     "vitest": "^1.6.0"
-  }
+  },
+  "packageManager": "pnpm@9.0.4+sha1.b198ac6d38244fd829253720f9daafd6a606834d"
 }
