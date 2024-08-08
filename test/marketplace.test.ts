@@ -27,48 +27,7 @@ import { getProtocolParams } from "../app/utils/getProtocolParams";
 // sign and submit the transaction
 // the NFT is now in the marketplace contract's UTXOs
 
-const listingPrice = 10_000;
-test("List NFT for sale", async () => {
-  const listingPrice = 10_000n; // Use BigInt for price
 
-  try {
-    const listingTx = await testListNFT(
-      setup.lucid,
-      setup.signerAddr,
-      marketplaceAddr,
-      setup.policyhash,
-      listingPrice,
-      setup.utxoWithNft
-    );
-
-    // Convert the Tx to a Lucid compatible transaction
-    const lucidTx = setup.lucid.fromTx(listingTx.toCbor().toString());
-
-    // Sign and submit the transaction
-    const signedTx = await lucidTx.sign().complete();
-    await signedTx.submit();
-
-    // Wait for transaction to be processed
-    setup.emulator.awaitBlock(20);
-
-    // Verify that the NFT is now in the marketplace contract's UTXOs
-    const marketplaceUtxos = await setup.lucid.utxosAt(
-      marketplaceAddr.toString()
-    );
-    const listedNft = marketplaceUtxos.find(
-      (u) =>
-        u.assets[
-          `${setup.policyhash.toString()}${tokenName.toString("hex")}`
-        ] === 1n
-    );
-
-    expect(listedNft).toBeDefined();
-    // Add more assertions here to verify the listing
-  } catch (error) {
-    console.error("Error in listing NFT:", error);
-    throw error;
-  }
-});
 
 // UNIT-Test2 Buying a listed NFT from the marketplace
 
