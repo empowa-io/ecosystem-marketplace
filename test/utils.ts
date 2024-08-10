@@ -204,7 +204,9 @@ export async function initiateFeeOracle(
 
 export interface MarketplaceInitiationOutcome {
 
-  // Populate with relevant parameters
+  marketplaceAddr: Address;
+  marketplaceUTxOs: UTxO[];
+  marketplaceScript: Script<"PlutusScriptV2">;
   
   }
 
@@ -214,8 +216,7 @@ export interface MarketplaceInitiationOutcome {
 export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
-  signerSeedPhrase: string,
-  ownerSeedPhrase: string, 
+  signerSeedPhrase: string, 
 ): Promise<MarketplaceInitiationOutcome> {  // To-Do: Define the MarketplaceInitiationOutcome interface according to the needs
   
   // Select the signer's wallet who will be deploying the marketplace contract
@@ -247,6 +248,7 @@ export async function initiateMarketplace(
   //console.log("Marketplace Address",marketplaceAddr.toString());
 
   //Build the Marketplace deployment transaction
+  // Index[0] -> UTxO with Reference Script
   const marketplaceDeploymentOutputs = [
     {
       address: marketplaceAddr,
@@ -256,8 +258,8 @@ export async function initiateMarketplace(
     },
   ];
 
-  const MarketplaceDeploymentTxBuilder = new TxBuilder(await getProtocolParams());
-  const marketplaceDeploymentTx = MarketplaceDeploymentTxBuilder.buildSync({
+  const marketplaceDeploymentTxBuilder = new TxBuilder(await getProtocolParams());
+  const marketplaceDeploymentTx = marketplaceDeploymentTxBuilder.buildSync({
     inputs: [{ utxo: marketplaceRefUTxO }],
     outputs: marketplaceDeploymentOutputs,
     changeAddress: Address.fromString(signerAddr),
