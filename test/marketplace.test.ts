@@ -297,3 +297,8 @@ test<LucidContext>("Test - Update NFT Listing", async ({
 //  sign and submit the transaction
 
 // UNIT-Test 4: Buying a listed NFT from the marketplace
+test<LucidContext>("Test - Canceling NFT Listing", async ({
+  lucid,
+  users,
+  emulator,
+}) => {

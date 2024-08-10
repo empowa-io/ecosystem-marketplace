@@ -212,7 +212,6 @@ export interface MarketplaceInitiationOutcome {
 
 // The initiateMarketplace is an abstract function to be used for setting up the initial state of the marketplace. 
 // It creates the marketplace address, creates and deploys the marketplace Contract
-// Build it resembling plu-ts version: app/deployMarkeplace.ts / lucid version : test/marketplaceold.test.ts
 export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
