@@ -22,7 +22,9 @@ import {
   Value,
   DataI,
   DataB,
+  pData,
   Tx,
+  PAddress,
   PCurrencySymbol,
   PPubKeyHash,
   PTokenName,
@@ -228,7 +230,7 @@ export async function initiateMarketplace(
   const marketplaceRefUTxO = lutxoToUTxO(marketplaceRefLUTxO);
 
   // Get the feeOracleNFTPolicyHash from the Fee Oracle initiation outcome to be used as PCurrencySymbol in the marketplace contract
-  // FeeOracleInitiationOutcome.feeOracleNftPolicyHash 
+  //FeeOracleInitiationOutcome.feeOracleNftPolicyHash 
 
   // Create the marketplace contract
   const marketplaceScript = makeMarketplace( // Define this contract via src/contracts/marketplace.ts, app/txns/marketplace/makeMarketplaceAndGetDeployTx.ts, app/txns/marketplace/getDeployMarketplaceTx.ts

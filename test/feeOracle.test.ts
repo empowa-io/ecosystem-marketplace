@@ -13,17 +13,13 @@ import {
 import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import { beforeEach, test } from "vitest";
 
-
-// valid input and datum
 async function getFeeUpdateTx(
-  //ARGUMENTS
   newFee: number,
   collateral: UTxO,
   feeOracleInput: UTxO,
   feeOracleSource: UTxO,
   provideTxFee: boolean,
   badDatum: boolean
-  // feeOracleAddr : Address
 ): Promise<Tx> {
   const txBuilder = new TxBuilder(await getProtocolParams());
   const updatedDatum = badDatum ? new DataB(`${newFee}`) : new DataI(newFee);
