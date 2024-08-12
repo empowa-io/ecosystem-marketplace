@@ -1,59 +1,16 @@
 import { Emulator, Lucid, Tx as LTx } from "@anastasia-labs/lucid-cardano-fork";
 
-import { DataI, DataB, TxBuilder, Tx, UTxO } from "@harmoniclabs/plu-ts";
-
 import {
   LucidContext,
   initiateFeeOracle,
   FeeOracleInitiationOutcome,
   generateAccountSeedPhrase,
   lutxoToUTxO,
+  getFeeUpdateTx,
 } from "./utils.ts";
 
-import { getProtocolParams } from "../app/utils/getProtocolParams.ts";
 import { beforeEach, test } from "vitest";
 
-async function getFeeUpdateTx(
-  newFee: number,
-  collateral: UTxO,
-  feeOracleInput: UTxO,
-  feeOracleSource: UTxO,
-  provideTxFee: boolean,
-  badDatum: boolean
-): Promise<Tx> {
-  const txBuilder = new TxBuilder(await getProtocolParams());
-  const updatedDatum = badDatum ? new DataB(`${newFee}`) : new DataI(newFee);
-
-  const initialInputs = [
-    {
-      utxo: feeOracleInput, // beacon UTxO with NFT that is being spent
-      referenceScriptV2: {
-        refUtxo: feeOracleSource,
-        datum: "inline",
-        redeemer: updatedDatum,
-      },
-    },
-  ];
-
-  const inputs = provideTxFee
-    ? [...initialInputs, { utxo: collateral }]
-    : initialInputs;
-
-  return txBuilder.buildSync({
-    inputs, // beacon UTxO that is being spent
-    collaterals: [collateral],
-    outputs: [
-      {
-        address: feeOracleInput.resolved.address, //UTxO sitting at the feeOracleAddr try to get this to adversary wallet
-        value: feeOracleInput.resolved.value,
-        datum: updatedDatum,
-      },
-    ],
-    changeAddress: collateral.resolved.address,
-  });
-}
-
-//Initialize users and emulator
 beforeEach<LucidContext>(async (context) => {
   const createUser = async () => {
     return await generateAccountSeedPhrase({ lovelace: BigInt(100_000_000) });
