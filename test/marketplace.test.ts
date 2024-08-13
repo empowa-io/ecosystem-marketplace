@@ -14,6 +14,7 @@ import {
   getListNFTTx,
   getUpdateListingTx,
   getCancelListingTx,
+  getBuyListingTx
 } from "./utils.ts";
 
 import { beforeEach, test } from "vitest";
@@ -190,7 +191,11 @@ test<LucidContext>("Test - Buy the NFT Listing", async ({
   users,
   emulator,
 }) => {
+  const listedNFTInitiationOutcome: ListedNftInitiationOutcome =
+    await initiateListedNft(emulator, lucid, users.owner, users.lister);
 
 
+  const buyListingTx = await getBuyListingTx(
 
+  );
 });

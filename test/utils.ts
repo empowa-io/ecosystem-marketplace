@@ -531,6 +531,86 @@ export async function getCancelListingTx(
   });
 }
 
+// export function getBuyListingTx( // TODO
+//   spendingUtxo: UTxO,
+//   deployedMarketplaceUTxO: UTxO,
+//   collateral: UTxO,
+//   returnAddress: Address,
+//   oracleUtxo: UTxO,
+//   buyer: PubKeyHash | PublicKey | Address,
+//   nftPolicy: Uint8Array,
+//   nftName: Uint8Array,
+//   paymentTokenPolicy: Uint8Array,
+//   paymentTokenName: Uint8Array,
+//   protocolFeeAmt: number | bigint,
+//   protocolOwnerAddress: Address,
+//   finalPrice: number | bigint
+// ): Tx
+// {
+//   let buyerPkh: PubKeyHash = undefined as any;
+    
+//   const buyListingTxBuilder = new TxBuilder(await getProtocolParams());
+//   return buyListingTxBuilder.buildSync({
+//       inputs: [{
+//           utxo: spendingUtxo,
+//           referenceScriptV2: {
+//               refUtxo: deployedMarketplaceUTxO,
+//               redeemer: SaleAction.Buy({}),
+//               datum: "inline"
+//           }
+//       }, { utxo: collateral }],
+//       collaterals: [ collateral ],
+//       collateralReturn: {
+//           address: returnAddress,
+//           value: Value.sub(
+//               collateral.resolved.value,
+//               Value.lovelaces( 15_000_000 )
+//           )
+//       },
+//       readonlyRefInputs: [ oracleUtxo ],
+//       requiredSigners: [ new PubKeyHash( buyerPkh ) ],
+//       outputs: [
+//           // nft to buyer
+//           {
+//               address: returnAddress,
+//               value: new Value([
+//                   Value.lovelaceEntry( 2_000_000 ),
+//                   Value.singleAssetEntry(
+//                       new Hash28( nftPolicy ),
+//                       nftName,
+//                       1
+//                   )
+//               ])
+//           },
+//           // paid protocol treasurery
+//           {
+//               address: protocolOwnerAddress,
+//               value: new Value([
+//                   Value.lovelaceEntry( 2_000_000 ),
+//                   Value.singleAssetEntry(
+//                       new Hash28( paymentTokenPolicy ),
+//                       paymentTokenName,
+//                       protocolFeeAmt
+//                   )
+//               ])
+//           },
+//           // paid seller
+//           {
+//               address: returnAddress,
+//               value: new Value([
+//                   Value.lovelaceEntry( 2_000_000 ),
+//                   Value.singleAssetEntry(
+//                       new Hash28( paymentTokenPolicy ),
+//                       paymentTokenName,
+//                       finalPrice
+//                   )
+//               ])
+//           },
+//       ],
+//       changeAddress: returnAddress
+//   })
+// }
+
 export const unsafeHexToUint8Array = (hex: string): Uint8Array => {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {

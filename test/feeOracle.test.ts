@@ -30,8 +30,6 @@ beforeEach<LucidContext>(async (context) => {
 
 test<LucidContext>("Test - Valid Update Fee Oracle"),
   async ({ lucid, users, emulator }) => {
-    // Select the signer wallet
-    lucid.selectWalletFromSeed(users.owner);
 
     const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
       await initiateFeeOracle(emulator, lucid, users.owner, false);
@@ -39,6 +37,9 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
     const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
 
+    // Select the signer wallet Why does this test not fail when selected with users.adversary here?
+    lucid.selectWalletFromSeed(users.owner);
+    
     const ownerUTxOs = await lucid.wallet.getUtxos();
     const ownersFirstLUTxO = ownerUTxOs[0];
     const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
