@@ -4,13 +4,11 @@ import { TxBuilder } from "@harmoniclabs/plu-ts";
 
 import {
   LucidContext,
-  initiateFeeOracle,
-  FeeOracleInitiationOutcome,
   initiateMarketplace,
   MarketplaceInitiationOutcome,
   generateAccountSeedPhrase,
   initiateListedNft,
-  ListedNFTInitiationOutcome,
+  ListedNftInitiationOutcome,
   lutxoToUTxO,
   unsafeHexToUint8Array,
   getListNFTTx,
@@ -119,7 +117,7 @@ test<LucidContext>("Test - Update the Listed NFT", async ({
   users,
   emulator,
 }) => {
-  const listedNFTInitiationOutcome: ListedNFTInitiationOutcome =
+  const listedNFTInitiationOutcome: ListedNftInitiationOutcome =
     await initiateListedNft(emulator, lucid, users.owner, users.lister);
   const listersAddress = listedNFTInitiationOutcome.listersAddress;
   const listedNftUTxO = listedNFTInitiationOutcome.listedNftUTxO;
@@ -158,7 +156,7 @@ test<LucidContext>("Test - Cancel the NFT Listing", async ({
   users,
   emulator,
 }) => {
-  const listedNFTInitiationOutcome: ListedNFTInitiationOutcome =
+  const listedNFTInitiationOutcome: ListedNftInitiationOutcome =
     await initiateListedNft(emulator, lucid, users.owner, users.lister);
 
   const listingUTxO = listedNFTInitiationOutcome.listedNftUTxO;
@@ -185,4 +183,14 @@ test<LucidContext>("Test - Cancel the NFT Listing", async ({
   console.log("Update Listing Tx Hash", updateCancelListingTxHash);
 
   emulator.awaitBlock(50);
+});
+
+test<LucidContext>("Test - Buy the NFT Listing", async ({
+  lucid,
+  users,
+  emulator,
+}) => {
+
+
+
 });

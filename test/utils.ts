@@ -326,6 +326,46 @@ export async function initiateMarketplace(
   };
 }
 
+export async function getListNFTTx(
+  changeAddress: Address,
+  listingUTxO: UTxO,
+  marketplaceAddress: Address,
+  listNftTokenName: Uint8Array,
+  listNftPolicy: Uint8Array,
+  initialListingPrice: number | bigint,
+  listersAddress: Address
+): Promise<Tx> {
+  const listingTxBuilder = new TxBuilder(await getProtocolParams());
+  return listingTxBuilder.buildSync({
+    inputs: [{ utxo: listingUTxO }],
+    collaterals: [listingUTxO],
+    collateralReturn: {
+      address: changeAddress,
+      value: Value.sub(listingUTxO.resolved.value, Value.lovelaces(5_000_000)),
+    },
+    outputs: [
+      {
+        address: marketplaceAddress,
+        value: new Value([
+          Value.lovelaceEntry(2_000_000),
+          Value.singleAssetEntry(
+            new Hash28(listNftPolicy),
+            listNftTokenName,
+            1
+          ),
+        ]),
+        datum: NFTSale.NFTSale({
+          policy: pDataB(listNftPolicy),
+          price: pDataI(initialListingPrice),
+          seller: pData(listersAddress.toData()),
+          tokenName: pDataB(listNftTokenName),
+        }),
+      },
+    ],
+    changeAddress: changeAddress,
+  });
+}
+
 export async function initiateListedNft(
   emulator: Emulator,
   lucid: Lucid,
@@ -416,46 +456,6 @@ export async function initiateListedNft(
     marketplaceSource, // For update test update and cancel test
     listedNftUTxO // For update test 
   };
-}
-
-export async function getListNFTTx(
-  changeAddress: Address,
-  listingUTxO: UTxO,
-  marketplaceAddress: Address,
-  listNftTokenName: Uint8Array,
-  listNftPolicy: Uint8Array,
-  initialListingPrice: number | bigint,
-  listersAddress: Address
-): Promise<Tx> {
-  const listingTxBuilder = new TxBuilder(await getProtocolParams());
-  return listingTxBuilder.buildSync({
-    inputs: [{ utxo: listingUTxO }],
-    collaterals: [listingUTxO],
-    collateralReturn: {
-      address: changeAddress,
-      value: Value.sub(listingUTxO.resolved.value, Value.lovelaces(5_000_000)),
-    },
-    outputs: [
-      {
-        address: marketplaceAddress,
-        value: new Value([
-          Value.lovelaceEntry(2_000_000),
-          Value.singleAssetEntry(
-            new Hash28(listNftPolicy),
-            listNftTokenName,
-            1
-          ),
-        ]),
-        datum: NFTSale.NFTSale({
-          policy: pDataB(listNftPolicy),
-          price: pDataI(initialListingPrice),
-          seller: pData(listersAddress.toData()),
-          tokenName: pDataB(listNftTokenName),
-        }),
-      },
-    ],
-    changeAddress: changeAddress,
-  });
 }
 
 export async function getUpdateListingTx(
