@@ -67,18 +67,23 @@ export interface MarketplaceInitiationOutcome {
   marketplaceScript: Script<"PlutusScriptV2">;
 }
 
-export interface ListedNftInitiationOutcome{
- // Populate this interface with the relevant information
+export interface ListedNftInitiationOutcome {
+  listersAddress: Address; // For update test update and cancel test
+  listingUTxO: UTxO, // For cancel test
+  marketplaceAddress: Address; // For update test 
+  marketplaceSource: UTxO; // For update test update and cancel test
+  listedNftUTxO: UTxO // For update test 
 }
 
 export async function initiateFeeOracle(
   emulator: Emulator,
   lucid: Lucid,
-  signerSeedPhrase: string,
+  signerSeedPhrase: string, //users.owner
   produceUnauthenticUTxO: boolean
 ): Promise<FeeOracleInitiationOutcome> {
+
   // Select the signer wallet
-  lucid.selectWalletFromSeed(signerSeedPhrase);
+  lucid.selectWalletFromSeed(signerSeedPhrase); //users.owner
   const signerAddr = await lucid.wallet.address();
 
   // Retrieve the signer's UTxOs and convert the first one to a plu-ts UTxO format
@@ -100,14 +105,10 @@ export async function initiateFeeOracle(
   );
   const signedOneShotMintTx = await unsignedOneShotMintTx.sign().complete();
   const oneShotMintTxHash = await signedOneShotMintTx.submit();
-  //console.log("NFT Tx Hash", oneShotMintTxHash);
 
   // Wait for the transaction
   emulator.awaitBlock(50);
 
-  //console.log("Utxos at signer addr Utxos after minting", await lucid.utxosAt(signerAddr.address)); // Minted nft is present in the UTxO
-
-  // Find the UTxO containing the minted NFT
   // It has been converted into plu-ts format from Lucid utilizing conversion functions
   const lutxosAfterMint = await lucid.wallet.getUtxos();
   const utxosAfterMint = lutxosAfterMint.map(lutxoToUTxO);
@@ -115,8 +116,6 @@ export async function initiateFeeOracle(
     // Assuming multiple UTxOs are present, we find the one with the NFT
     (u) => u.resolved.value.get(feeOracleNftPolicyHash, tokenName) === 1n
   )!;
-  //console.log("UTxO with NFT", beaconUTxO);
-  // Use this beaconUTxO, which contains the minted NFT to be able to set the marketplace fee.
 
   // Prepare for Fee Oracle deployment
   const ownerPaymentCredential = lucid.utils.paymentCredentialOf(signerAddr); //owner address
@@ -166,11 +165,6 @@ export async function initiateFeeOracle(
         },
       ]
     : initialDeploymentTxOutputs;
-  // Example on how "..." is used to copy the initialDeploymentTxOutputs and add the new output
-  // const tempList = initialDeploymentTxOutputs
-  // const tempList2 = [...initialDeploymentTxOutputs]
-  // Ternary operator "?" is used to check if the produceUnauthenticUTxO is true or false. If true then we add an additional
-  // output to the transaction, which would be a case for an adversary setting marketplace fee to 0%
 
   // Build the Fee Oracle deployment transaction
   const initialDeploymentTx = new TxBuilder(await getProtocolParams());
@@ -194,18 +188,14 @@ export async function initiateFeeOracle(
     .sign()
     .complete();
   const feeOracleDeploymentTxHash = await signedFeeOracleDeploymentTx.submit();
-  //console.log("Fee Oracle Deployment Tx Hash", feeOracleDeploymentTxHash);
   // This has to be present in the transaction as a reference
 
   emulator.awaitBlock(50);
 
-  //console.log("utxos at signer addr initialSetup", await lucid.wallet.getUtxos());
-
   // Get the final state of the Fee Oracle UTxOs
   const feeOracleLUTxOs = await lucid.utxosAt(feeOracleAddr.toString());
   const feeOracleUTxOs = feeOracleLUTxOs.map(lutxoToUTxO);
-  //console.log("Fee oracle addr with one more tx", await lucid.getUtxos());
-  //console.log("utxos at feeOracle addr", await lucid.utxosAt(feeOracleAddr.toString()));
+
 
   return {
     feeOracleNftPolicyHash,
@@ -259,27 +249,29 @@ export async function getFeeUpdateTx(
 export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
-  signerSeedPhrase: string
+  signerSeedPhrase: string //users.owner
 ): Promise<MarketplaceInitiationOutcome> {
-  // To-Do: Define the MarketplaceInitiationOutcome interface according to the needs
+  // Select the signer wallet
+  lucid.selectWalletFromSeed(signerSeedPhrase); //users.owner that initiates fee oracle 
 
-  // Select the signer's wallet who will be deploying the marketplace contract
-  lucid.selectWalletFromSeed(signerSeedPhrase);
+  const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+    await initiateFeeOracle(emulator, lucid, signerSeedPhrase, false); //users.owner
+  const feeOracleNftPolicyHash =
+    feeOracleInitiationOutcome.feeOracleNftPolicyHash;
+
+  // Select again the owner's wallet who will be deploying the marketplace contract after initiating fee oracle
+  lucid.selectWalletFromSeed(signerSeedPhrase); //users.owner
   const signerAddr = await lucid.wallet.address();
 
-  // Retrieve the signer's UTxOs and convert the first one to a plu-ts UTxO format to be used for marketplace deployment
+  // Retrieve the owners's UTxOs and convert a LUTxO ,suitable for deploying the marketplace, to a plu-ts UTxO format to be used for marketplace deployment
   const initialUTxOs = await lucid.wallet.getUtxos();
-  const marketplaceRefLUTxO = initialUTxOs[0];
+  const marketplaceRefLUTxO = initialUTxOs[0]; // ? how to choose the initial UTxO for the marketplace deployment?
   const marketplaceRefUTxO = lutxoToUTxO(marketplaceRefLUTxO);
-
-  // Get the feeOracleNFTPolicyHash from the Fee Oracle initiation outcome to be used as PCurrencySymbol in the marketplace contract
-  //FeeOracleInitiationOutcome.feeOracleNftPolicyHash
 
   // Create the marketplace contract
   const marketplaceScript = makeMarketplace(
-    // Define this contract via src/contracts/marketplace.ts, app/txns/marketplace/makeMarketplaceAndGetDeployTx.ts, app/txns/marketplace/getDeployMarketplaceTx.ts
-    PCurrencySymbol.from(""), //in plu-ts its "PCurrencySymbol.from( cfg.paymentAsset.policy.toString() )""
-    PTokenName.from(""), //in plu-ts PTokenName.from( cfg.paymentAsset.tokenName ),
+    PCurrencySymbol.from(""),
+    PTokenName.from(""),
     PAddress.fromData(pData(Address.fromString(signerAddr).toData())), //owner of the marketplace
     PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()), // oracleNFTSymbol
     PTokenName.from(tokenName) // oracleNFTname
@@ -290,7 +282,6 @@ export async function initiateMarketplace(
     "testnet",
     PaymentCredentials.script(marketplaceScript.hash)
   );
-  //console.log("Marketplace Address",marketplaceAddr.toString());
 
   //Build the Marketplace deployment transaction
   // Index[0] -> UTxO with Reference Script
@@ -322,7 +313,6 @@ export async function initiateMarketplace(
   const marketplaceDeploymentTxHash = await signedmarketplaceTx.submit();
 
   emulator.awaitBlock(50);
-  //console.log("Utxos at Marketplace Address", await lucid.utxosAt(marketplaceAddr.toString()));
 
   // Get the final state of the Marketplace UTxOs
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddr.toString());
@@ -339,9 +329,93 @@ export async function initiateMarketplace(
 export async function initiateListedNft(
   emulator: Emulator,
   lucid: Lucid,
-  signerSeedPhrase: string
-): Promise<ListedNFTInitiationOutcome> {
- // Move the code from the listing test to here
+  signerSeedPhrase: string, // users.owner, who deploys the marketplace and thus fee oracle
+  listerSeedPhrase: string  // user.lister, who lists the NFT on the marketplace
+): Promise<ListedNftInitiationOutcome> {
+
+  // Select users.owner as this user will be initiating the Fee Oracle and deploy the marketplace
+  lucid.selectWalletFromSeed(signerSeedPhrase); // users.owner
+
+  // Marketplace that already initiates the Fee Oracle, since the feeOracleNftPolicyHash is needed to deploy the marketplace the fee oracle must be initiated inside the marketplace initiation function
+  const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
+    await initiateMarketplace(emulator, lucid, signerSeedPhrase);
+  const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
+  const marketplaceSource = marketplaceInitiationOutcome.marketplaceUTxOs[0];
+
+  // Select the lister`s wallet
+  lucid.selectWalletFromSeed(listerSeedPhrase); // users.lister
+
+  // Get lister's UTxOs and convert the first one to a plu-ts UTxO format
+  const listersInitialUTxOs = await lucid.wallet.getUtxos();
+  const listerRefLUTxO = await listersInitialUTxOs[0];
+  const listerRefUTxO = await lutxoToUTxO(listerRefLUTxO);
+
+  // Create a transaction to mint a single NFT
+  const mintListNftTx = await getMintOneShotTx(
+    new TxBuilder(await getProtocolParams()),
+    listerRefUTxO,
+    listerRefUTxO.resolved.address
+  );
+
+  const listNftPolicyHash = mintListNftTx.nftPolicySource.hash;
+  const listNftTokenName = unsafeHexToUint8Array("4D594E4654"); //Using the util function to declare a new tokenname for the NFT that will be listed and have a clear distinction between feeOracleNft and the listNft
+
+  // Sign and submit the minting transaction
+  const unsignedListNftMintTx = lucid.fromTx(
+    mintListNftTx.tx.toCbor().toString()
+  );
+  const signedListNftMintTx = await unsignedListNftMintTx.sign().complete();
+  const listNftMintTxHash = await signedListNftMintTx.submit();
+
+  emulator.awaitBlock(50);
+
+  // Find the UTxO containing the minted NFT to be listed, and convert it into plu-ts format
+  const lutxosAfterListNftMint = await lucid.wallet.getUtxos();
+  const utxosAfterListNftMint = lutxosAfterListNftMint.map(lutxoToUTxO);
+  const listingUTxO = utxosAfterListNftMint.find(
+    // Assuming multiple UTxOs are present, we find the one with the NFT
+    (u) => u.resolved.value.get(listNftPolicyHash, listNftTokenName) === 1n
+  )!;
+
+  // Constants for listing transaction
+  const listersAddress = listingUTxO.resolved.address;
+  const changeAddress = listingUTxO.resolved.address; // change from the listing transaction will go to lister's address as well
+  const initialListingPrice: number = 10_000; 
+  const listNftPolicy = listNftPolicyHash.toBuffer(); // policy hash of the NFT to be listed in Uint8Array format
+
+  // Build the listing transaction
+  const nftListingTx = await getListNFTTx(
+    changeAddress,
+    listingUTxO, // UTxO containing the NFT to be listed
+    marketplaceAddress,
+    listNftTokenName,
+    listNftPolicy,
+    initialListingPrice,
+    listersAddress
+  );
+
+  // Sign and submit the listing NFT onto the marketplace transaction
+  const nftListingLTx = lucid.fromTx(nftListingTx.toCbor().toString());
+  const signedNftListingLTx = await nftListingLTx.sign().complete();
+  const nftListingTxHash = await signedNftListingLTx.submit();
+  console.log("Listed NFT Tx Hash", nftListingTxHash);
+
+  // Wait for transaction confirmation
+  emulator.awaitBlock(50);
+
+  // Find the UTxO of the listed NFT on the marketplace
+  const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
+  const marketplaceUTxO = await marketplaceLUTxOs.map(lutxoToUTxO);
+  const listedNftUTxO = marketplaceUTxO.find(
+    (u) => u.resolved.value.get(listNftPolicyHash, listNftTokenName) === 1n 
+  )!;
+  return {
+    listingUTxO, // For cancel test
+    marketplaceAddress, // For update test 
+    listersAddress, // For update test update and cancel test
+    marketplaceSource, // For update test update and cancel test
+    listedNftUTxO // For update test 
+  };
 }
 
 export async function getListNFTTx(
@@ -435,7 +509,7 @@ export async function getUpdateListingTx(
 export async function getCancelListingTx(
   listingUTxO: UTxO,
   collateral: UTxO,
-  ownerAddress: Address,
+  listersAddress: Address,
   marketplaceSource: UTxO
 ): Promise<Tx> {
   const cancelListingTxBuilder = new TxBuilder(await getProtocolParams());
@@ -452,8 +526,8 @@ export async function getCancelListingTx(
       { utxo: collateral },
     ],
     collaterals: [collateral],
-    requiredSigners: [ownerAddress.paymentCreds.hash],
-    changeAddress: ownerAddress,
+    requiredSigners: [listersAddress.paymentCreds.hash],
+    changeAddress: listersAddress,
   });
 }
 

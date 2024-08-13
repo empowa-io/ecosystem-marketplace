@@ -33,16 +33,15 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     // Select the signer wallet
     lucid.selectWalletFromSeed(users.owner);
 
-    // Get initial utxos and prepare for minting
-    const ownerUTxOs = await lucid.wallet.getUtxos();
-    const ownersFirstLUTxO = ownerUTxOs[0];
-    const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
-
     const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
       await initiateFeeOracle(emulator, lucid, users.owner, false);
 
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
     const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
+
+    const ownerUTxOs = await lucid.wallet.getUtxos();
+    const ownersFirstLUTxO = ownerUTxOs[0];
+    const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
 
     const feeUpdateTx = await getFeeUpdateTx(
       30_000,
