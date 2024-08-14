@@ -44,6 +44,7 @@ import { tokenName } from "../app/constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { makeMarketplace } from "../src/contracts/marketplace";
 import { getProtocolParams } from "../app/utils/getProtocolParams";
+import { DataConstr } from "@harmoniclabs/plu-ts";
 
 export type LucidContext = {
   lucid: Lucid;
@@ -73,13 +74,10 @@ export interface MarketplaceInitiationOutcome {
 }
 
 export interface NftListingOutcome {
-  sellerAddress: Address; // For update test update and cancel test
-  listingUTxO: UTxO; // For cancel test
-  marketplaceAddress: Address; // For update test
-  marketplaceSource: UTxO; // For update test update and cancel test
-  listedNftUTxO: UTxO; // For update test
-  listNftPolicyHash_01: Hash28; // For buy test
-  listNftTokenName_01: Uint8Array; // For buy test
+  sellerAddress: Address; // For update test and cancel test
+  listingUTxO: UTxO; // For update test
+  nftPolicyHash: Hash28; // For buy test
+  nftTokenName: Uint8Array; // For buy test
 }
 
 export async function initiateFeeOracle(
@@ -337,7 +335,7 @@ export async function initiateMarketplace(
 
 export async function getListNFTTx(
   changeAddress: Address,
-  listingUTxO: UTxO,
+  nftUTxO: UTxO,
   marketplaceAddress: Address,
   listNftTokenName: Uint8Array,
   listNftPolicy: Uint8Array,
@@ -346,11 +344,11 @@ export async function getListNFTTx(
 ): Promise<Tx> {
   const listingTxBuilder = new TxBuilder(await getProtocolParams());
   return listingTxBuilder.buildSync({
-    inputs: [{ utxo: listingUTxO }],
-    collaterals: [listingUTxO],
+    inputs: [{ utxo: nftUTxO }],
+    collaterals: [nftUTxO],
     collateralReturn: {
       address: changeAddress,
-      value: Value.sub(listingUTxO.resolved.value, Value.lovelaces(5_000_000)),
+      value: Value.sub(nftUTxO.resolved.value, Value.lovelaces(5_000_000)),
     },
     outputs: [
       {
@@ -375,15 +373,13 @@ export async function getListNFTTx(
   });
 }
 
-export async function initiateListedNft(
+export async function listNft(
   emulator: Emulator,
   lucid: Lucid,
   marketplaceInitiationOutcome: MarketplaceInitiationOutcome,
   sellerSeedPhrase: string // users.seller, who lists the NFT on the marketplace
 ): Promise<NftListingOutcome> {
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-  const marketplaceSource =
-    marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
 
   // Select the sellers`s wallet
   lucid.selectWalletFromSeed(sellerSeedPhrase);
@@ -445,9 +441,6 @@ export async function initiateListedNft(
 
   return {
     listedNftUTxO, // For update test
-    listingUTxO, // For cancel test
-    marketplaceAddress, // For update test
-    marketplaceSource, // For update test, cancel test
     sellerAddress, // For update test, cancel test
     listNftPolicyHash_01, // For buy test
     listNftTokenName_01, // For buy test
@@ -460,10 +453,45 @@ export async function getUpdateListingTx(
   collateral: UTxO,
   ownerAddress: Address, // Owner of the listing
   marketplaceSource: UTxO,
-  marketplaceAddress: Address
+  marketplaceAddress: Address,
+  badPrice?: number | bigint, // Can be set to 0 for a malicious attempt
+  adversaryAddress?: Address, // users.adversary can be used to create a failed update of the listing 
+  badPolicy?: Uint8Array, // A random NFT policy can be provided to create a failed update of the listing
+  badTokenName?: Uint8Array
 ): Promise<Tx> {
   const initialDatum = listedNftUTxO.resolved.datum;
+  if (!(initialDatum instanceof DataConstr))
+    throw new Error("listing utxo datum is not inline");
   const initialDatumFields = initialDatum.fields;
+
+  // truthiness (research)
+  // Alternative way of expressing the logic of the turnary operator used in updatedDatumPrice
+  // let updatedDatumPolicy: DataB;
+  // if (badPolicy  != undefined){
+  //   updatedDatumPolicy = initialDatumFields[2]
+  // }
+  // else (
+  //   updatedDatumPolicy = new DataB(badPolicy)
+  // )
+
+  // For testing purposes we can create a Datum with a bad price, policy, or token name when the optional arguments badPrice,adversaryAddress, badPolicy, or badTokenName are provided
+  const updatedDatumPrice = new DataI(badPrice ?? newPrice);
+  const updatedDatumSeller = adversaryAddress
+    ? adversaryAddress.toData()
+    : initialDatumFields[1];
+  const updatedDatumPolicy = badPolicy
+    ? new DataB(badPolicy)
+    : initialDatumFields[2];
+  const updatedDatumTokenName = badTokenName
+    ? new DataB(badTokenName)
+    : initialDatumFields[3];
+
+  const updatedDatum = new DataConstr(0, [  // in src/contracts/marketplace.ts it can be observed under the NFTSale data type, that index 0 refers to the NFTSale constructor and its individual fields
+    updatedDatumPrice,
+    updatedDatumSeller,
+    updatedDatumPolicy,
+    updatedDatumTokenName,
+  ]);
 
   const updateListingTxBuilder = new TxBuilder(await getProtocolParams());
   return await updateListingTxBuilder.build({
@@ -473,13 +501,7 @@ export async function getUpdateListingTx(
         referenceScriptV2: {
           refUtxo: marketplaceSource,
           datum: "inline",
-          /**
-           * close redeemer can also be used to update a listed asset (and is more efficient than `Update`)
-           *
-           * however the contract will not check that the asset is sent back to the contract
-           * (which it does if using the `SaleAction.Update({ newPrice })`, or  `new DataConstr(2, [ new DataI( newPrice ) ] )` redeemer)
-           **/
-          redeemer: new DataConstr(1, []), // SaleAction.Close({})
+          redeemer: new DataConstr(2, [new DataI(newPrice)]), // in src/contracts/marketplace.ts it can be observed under the SaleAction redeemer, that index 2 is the Update action ( index 0 -> Buy, index 1 -> Close, index 2 -> Update)
         },
       },
       { utxo: collateral },
@@ -488,12 +510,7 @@ export async function getUpdateListingTx(
       {
         address: marketplaceAddress,
         value: listedNftUTxO.resolved.value,
-        datum: new DataConstr(0, [
-          new DataI(newPrice), // price
-          initialDatumFields[1], // seller
-          initialDatumFields[2], // policy
-          initialDatumFields[3], // tokenName
-        ]),
+        datum: updatedDatum,
       },
     ],
     collaterals: [collateral],
@@ -502,12 +519,13 @@ export async function getUpdateListingTx(
   });
 }
 
-export async function getCancelListingTx(
+export async function getCancelListingTx( //bad path, adversary -> cancel listing
   listingUTxO: UTxO,
   collateral: UTxO,
   sellerAddress: Address,
   marketplaceSource: UTxO
 ): Promise<Tx> {
+
   const cancelListingTxBuilder = new TxBuilder(await getProtocolParams());
   return await cancelListingTxBuilder.build({
     inputs: [
@@ -516,13 +534,13 @@ export async function getCancelListingTx(
         referenceScriptV2: {
           refUtxo: marketplaceSource,
           datum: "inline",
-          redeemer: new DataConstr(1, []), // SaleAction.Close({})
+          redeemer: new DataConstr(1, []),
         },
       },
       { utxo: collateral },
     ],
     collaterals: [collateral],
-    requiredSigners: [sellerAddress.paymentCreds.hash],
+    requiredSigners: [sellerAddress.paymentCreds.hash], // there could be a compromised front end that allows the adversary to cancel the listing
     changeAddress: sellerAddress,
   });
 }
