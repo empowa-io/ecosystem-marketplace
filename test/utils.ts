@@ -323,13 +323,15 @@ export async function initiateMarketplace(
   // Get the final state of the Marketplace UTxOs
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddr.toString());
   const [marketplaceRefScriptUTxO] = marketplaceLUTxOs.map(lutxoToUTxO);
-  const marketplaceOwnerAddr = Address.fromString(ownerAddr);
+  const marketplaceOwnerAddress = Address.fromString(ownerAddr);
 
   return {
     marketplaceOwnerAddress,
     marketplaceAddr,
     marketplaceRefScriptUTxO,
     marketplaceScript,
+    currencyPolicyId,
+    currencyTokenName,
   };
 }
 
@@ -525,7 +527,7 @@ export async function getCancelListingTx(
   });
 }
 
-export function getBuyListingTx(
+export async function getBuyListingTx(
   listedNftUTxO: UTxO,
   marketplaceSource: UTxO,
   collateralUTxO: UTxO,
