@@ -44,7 +44,6 @@ import { tokenName } from "../app/constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { makeMarketplace } from "../src/contracts/marketplace";
 import { getProtocolParams } from "../app/utils/getProtocolParams";
-import { DataConstr } from "@harmoniclabs/plu-ts";
 
 export type LucidContext = {
   lucid: Lucid;
@@ -74,10 +73,10 @@ export interface MarketplaceInitiationOutcome {
 }
 
 export interface NftListingOutcome {
-  sellerAddress: Address; // For update test and cancel test
-  listingUTxO: UTxO; // For update test
-  nftPolicyHash: Hash28; // For buy test
-  nftTokenName: Uint8Array; // For buy test
+  sellerAddress: Address;
+  listedNftUTxO: UTxO;
+  nftPolicyHash: Hash28;
+  nftTokenName: Uint8Array;
 }
 
 export async function initiateFeeOracle(
@@ -110,10 +109,9 @@ export async function initiateFeeOracle(
   const signedOneShotMintTx = await unsignedOneShotMintTx.sign().complete();
   const oneShotMintTxHash = await signedOneShotMintTx.submit();
 
-  // Wait for the transaction
   emulator.awaitBlock(50);
 
-  // It has been converted into plu-ts format from Lucid utilizing conversion functions
+  // UTxO has been converted into plu-ts format from Lucid utilizing conversion functions
   const lutxosAfterMint = await lucid.wallet.getUtxos();
   const utxosAfterMint = lutxosAfterMint.map(lutxoToUTxO);
   const beaconUTxO = utxosAfterMint.find(
@@ -215,7 +213,9 @@ export async function getFeeUpdateTx(
   feeOracleInput: UTxO,
   feeOracleSource: UTxO,
   provideTxFee: boolean,
-  badDatum: boolean
+  badDatum: boolean,
+  badReroutedUTxO: boolean,
+  destinationAddress?: Address 
 ): Promise<Tx> {
   const txBuilder = new TxBuilder(await getProtocolParams());
   const updatedDatum = badDatum ? new DataB(`${newFee}`) : new DataI(newFee);
@@ -235,16 +235,27 @@ export async function getFeeUpdateTx(
     ? [...initialInputs, { utxo: collateral }]
     : initialInputs;
 
+  const outputs =
+    badReroutedUTxO 
+      ? [
+          {
+            address: destinationAddress, // UTxO sitting at the adversary wallet
+            value: feeOracleInput.resolved.value,
+            datum: updatedDatum,
+          },
+        ]
+      : [
+          {
+            address: feeOracleInput.resolved.address, // UTxO sitting at the feeOracleAddr
+            value: feeOracleInput.resolved.value,
+            datum: updatedDatum,
+          },
+        ];
+
   return txBuilder.buildSync({
-    inputs, // beacon UTxO that is being spent
+    inputs,
     collaterals: [collateral],
-    outputs: [
-      {
-        address: feeOracleInput.resolved.address, //UTxO sitting at the feeOracleAddr try to get this to adversary wallet
-        value: feeOracleInput.resolved.value,
-        datum: updatedDatum,
-      },
-    ],
+    outputs,
     changeAddress: collateral.resolved.address,
   });
 }
@@ -253,7 +264,7 @@ export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
   ownerSeedPhrase: string, //users.owner
-  currencyPolicyId: Hash28 | "",
+  currencyPolicyId: Hash28 | "", // "" for ADA
   currencyTokenName: string,
   feeOracleInitiationOutcome: FeeOracleInitiationOutcome
 ): Promise<MarketplaceInitiationOutcome> {
@@ -390,25 +401,23 @@ export async function listNft(
   // const unit_01 = policyHash_01 + tokenName_01 ;
 
   // Listing NFT constants
-  const listNftPolicyHash_01 = new Hash28(generate56CharHex());
-  const listNftTokenName_01 = generateRandomTokenName();
+  const nftPolicyHash = new Hash28(generate56CharHex());
+  const nftTokenName = generateRandomTokenName();
   const unit_01 =
-    listNftPolicyHash_01.toString() +
-    Buffer.from(listNftTokenName_01).toString("hex");
+    nftPolicyHash.toString() + Buffer.from(nftTokenName).toString("hex");
 
   // Find the UTxO containing the minted NFT to be listed, and convert it into plu-ts format
   const sellerLUTxOs = await lucid.wallet.getUtxos();
   const sellerUTxOs = sellerLUTxOs.map(lutxoToUTxO);
   const listingUTxO = sellerUTxOs.find(
     // Assuming multiple UTxOs could be present, we find the one with the NFT
-    (u) =>
-      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === 1n
+    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === 1n
   )!;
 
   // Constants for listing transaction
   const sellerAddress = listingUTxO.resolved.address;
   const changeAddress = listingUTxO.resolved.address;
-  const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTTx
+  const listNftPolicy = nftPolicyHash.toBuffer(); // in Uint8Array format required for getListNFTTx
   const initialListingPrice: number = 10_000;
 
   // Build the listing transaction
@@ -416,7 +425,7 @@ export async function listNft(
     changeAddress,
     listingUTxO, //UTxO containing the NFT to be listed
     marketplaceAddress,
-    listNftTokenName_01, // Uint8Array
+    nftTokenName, // Uint8Array
     listNftPolicy, // Uint8Array
     initialListingPrice,
     sellerAddress
@@ -435,15 +444,14 @@ export async function listNft(
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
   const marketplaceUTxO = await marketplaceLUTxOs.map(lutxoToUTxO);
   const listedNftUTxO = marketplaceUTxO.find(
-    (u) =>
-      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === 1n
+    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === 1n
   )!;
 
   return {
     listedNftUTxO, // For update test
     sellerAddress, // For update test, cancel test
-    listNftPolicyHash_01, // For buy test
-    listNftTokenName_01, // For buy test
+    nftPolicyHash, // For buy test
+    nftTokenName, // For buy test
   };
 }
 
@@ -455,7 +463,7 @@ export async function getUpdateListingTx(
   marketplaceSource: UTxO,
   marketplaceAddress: Address,
   badPrice?: number | bigint, // Can be set to 0 for a malicious attempt
-  adversaryAddress?: Address, // users.adversary can be used to create a failed update of the listing 
+  adversaryAddress?: Address, // users.adversary can be used to create a failed update of the listing
   badPolicy?: Uint8Array, // A random NFT policy can be provided to create a failed update of the listing
   badTokenName?: Uint8Array
 ): Promise<Tx> {
@@ -474,7 +482,7 @@ export async function getUpdateListingTx(
   //   updatedDatumPolicy = new DataB(badPolicy)
   // )
 
-  // For testing purposes we can create a Datum with a bad price, policy, or token name when the optional arguments badPrice,adversaryAddress, badPolicy, or badTokenName are provided
+  // For testing purposes we can create a Datum with a bad price, policy, or token name when the optional arguments badPrice, adversaryAddress, badPolicy, or badTokenName are provided
   const updatedDatumPrice = new DataI(badPrice ?? newPrice);
   const updatedDatumSeller = adversaryAddress
     ? adversaryAddress.toData()
@@ -486,7 +494,8 @@ export async function getUpdateListingTx(
     ? new DataB(badTokenName)
     : initialDatumFields[3];
 
-  const updatedDatum = new DataConstr(0, [  // in src/contracts/marketplace.ts it can be observed under the NFTSale data type, that index 0 refers to the NFTSale constructor and its individual fields
+  const updatedDatum = new DataConstr(0, [
+    // in src/contracts/marketplace.ts it can be observed under the NFTSale data type, that index 0 refers to the NFTSale constructor and its individual fields
     updatedDatumPrice,
     updatedDatumSeller,
     updatedDatumPolicy,
@@ -525,7 +534,6 @@ export async function getCancelListingTx( //bad path, adversary -> cancel listin
   sellerAddress: Address,
   marketplaceSource: UTxO
 ): Promise<Tx> {
-
   const cancelListingTxBuilder = new TxBuilder(await getProtocolParams());
   return await cancelListingTxBuilder.build({
     inputs: [
@@ -540,7 +548,7 @@ export async function getCancelListingTx( //bad path, adversary -> cancel listin
       { utxo: collateral },
     ],
     collaterals: [collateral],
-    requiredSigners: [sellerAddress.paymentCreds.hash], // there could be a compromised front end that allows the adversary to cancel the listing
+    requiredSigners: [sellerAddress.paymentCreds.hash],
     changeAddress: sellerAddress,
   });
 }
@@ -554,7 +562,7 @@ export async function getBuyListingTx(
   buyer: PubKeyHash | PublicKey | Address, // Choose a type
   listNftPolicy: Uint8Array,
   listNftTokenName_01: Uint8Array,
-  currencyPolicyId: Uint8Array, // Should be transformed to Uint8Array
+  currencyPolicyId: Hash28,
   currencyTokenName: Uint8Array, // currently a string needs to be transformed to Uint8Array
   protocolFeeAmt: number | bigint,
   marketplaceOwnerAddress: Address,

@@ -8,7 +8,7 @@ import {
   lutxoToUTxO,
   getFeeUpdateTx,
 } from "./utils.ts";
-
+import { Address } from "@harmoniclabs/plu-ts";
 import { beforeEach, test } from "vitest";
 
 beforeEach<LucidContext>(async (context) => {
@@ -37,7 +37,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
     const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
 
-    // Select the signer wallet Why does this test not fail when selected with users.adversary here?
+    // Select the signer wallet
     lucid.selectWalletFromSeed(users.owner);
     
     const ownerUTxOs = await lucid.wallet.getUtxos();
@@ -63,10 +63,43 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
     emulator.awaitBlock(50);
   };
 
-// test<LucidContext>("Test - Invalid Update Fee Oracle"),
-// spend fee oracle UTxo that should not be spendable, return it to adversary wallet take
-// the reproduced UTxO at the fee oracle address and try to spend it with inputting the wrong datum
-// output field of FeeOracle UTxO should be the adversary wallet for attack
-// take this as an argument for getFeeUpdateTx
-// add an argument to getFeeUpdateTx called destination Address for customizability of the function (so that we can customize
-// it for our sad path test)
+test<LucidContext>("Test - Invalid Update Fee Oracle"),
+  async ({ lucid, users, emulator }) => {
+
+    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+      await initiateFeeOracle(emulator, lucid, users.owner, false);
+
+    const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
+    const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
+    
+    lucid.selectWalletFromSeed(users.adversary);
+    const adversaryAddr = await lucid.wallet.address();
+    const destinationAddress = Address.fromString(adversaryAddr)
+
+    const adversaryUTxOs = await lucid.wallet.getUtxos();
+    const adversaryFirstLUTxO = adversaryUTxOs[0];
+    const adversaryFirstUTxO = lutxoToUTxO(adversaryFirstLUTxO);
+    
+    // Attempt to update fee and redirect the Beacon UTxO to the adversary's wallet
+    const invalidFeeUpdateTx = await getFeeUpdateTx(
+      30_000,
+      adversaryFirstUTxO,
+      beaconUTxO,
+      feeOracleScriptUTxO,
+      true,
+      false, // Not using bad datum
+      true, // Attempt to reroute UTxO to adversary's wallet
+      destinationAddress // Adversary's wallet address
+    );
+
+    // Sign and submit the fee update transaction
+    const invalidFeeUpdateLTx = lucid.fromTx(invalidFeeUpdateTx.toCbor().toString());
+    const invalidSignedFeeUpdateLTx = await invalidFeeUpdateLTx.sign().complete();
+    const invalidFeeUpdateTxHash = await invalidSignedFeeUpdateLTx.submit();
+    console.log("NFT Tx Hash", invalidFeeUpdateTxHash);
+
+    // Wait for the transaction
+    emulator.awaitBlock(50);
+  };
+
+
