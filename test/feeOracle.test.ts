@@ -28,17 +28,16 @@ beforeEach<LucidContext>(async (context) => {
   context.lucid = await Lucid.new(context.emulator);
 });
 
-test<LucidContext>("Test - Valid Update Fee Oracle"),
-  async ({ lucid, users, emulator }) => {
+test<LucidContext>("Test - Valid Update Fee Oracle", async ({ lucid, users, emulator }) => {
+  try {
+    // Select the signer wallet
+    lucid.selectWalletFromSeed(users.owner);
 
     const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
       await initiateFeeOracle(emulator, lucid, users.owner, false);
 
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
     const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
-
-    // Select the signer wallet
-    lucid.selectWalletFromSeed(users.owner);
     
     const ownerUTxOs = await lucid.wallet.getUtxos();
     const ownersFirstLUTxO = ownerUTxOs[0];
@@ -50,6 +49,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
       beaconUTxO,
       feeOracleScriptUTxO,
       true,
+      false,
       false
     );
 
@@ -61,7 +61,14 @@ test<LucidContext>("Test - Valid Update Fee Oracle"),
 
     // Wait for the transaction
     emulator.awaitBlock(50);
-  };
+
+    // If we reach this point without throwing, the test passes
+    console.log("Test completed successfully");
+  } catch (error) {
+    console.error("Test failed:", error);
+    throw error; // Re-throw the error to make the test fail
+  }
+}, 60_000); // Increased timeout to 60 seconds
 
 test<LucidContext>("Test - Invalid Update Fee Oracle"),
   async ({ lucid, users, emulator }) => {
