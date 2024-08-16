@@ -8,7 +8,6 @@ import {
   listNft,
   NftListingOutcome,
   lutxoToUTxO,
-  getListNFTTx,
   getUpdateListingTx,
   getCancelListingTx,
   generate56CharHex,
@@ -18,15 +17,8 @@ import {
   getBuyListingTx,
 } from "./utils.ts";
 
-import {
-  DataConstr,
-  Hash28,
-  DataI,
-  PubKeyHash,
-  Address,
-} from "@harmoniclabs/plu-ts";
+import { Hash28, Address } from "@harmoniclabs/plu-ts";
 import { beforeEach, test, expect } from "vitest";
-import { feeOracle } from "../src/contracts/feeOracle.ts";
 
 // Listing NFT constants
 const listNftPolicyHash_01 = new Hash28(generate56CharHex());
@@ -49,7 +41,7 @@ const unit_03 =
   listNftPolicyHash_03.toString() +
   Buffer.from(listNftTokenName_03).toString("hex");
 
-// Currency constants
+// Marketplace currency constants
 const sampleCurrencyPolicyId = new Hash28(generate56CharHex());
 const sampleCurrencyTokenName = generateRandomTokenName();
 const sampleCurrencyUnit =
@@ -73,7 +65,7 @@ beforeEach<LucidContext>(async (context) => {
   };
   const buyerAssets = {
     lovelace: BigInt(100_000_000),
-    [sampleCurrencyUnit]: BigInt(100_000_000), //MarketplaceCurrency
+    [sampleCurrencyUnit]: BigInt(100_000_000), // MarketplaceCurrency
   };
 
   context.users = {
@@ -126,7 +118,7 @@ test<LucidContext>("Test - Valid {Update} Execution on Listed NFT", async ({
 
   // Get a collateral UTxO from the seller's wallet
   const collateralUTxOs = await lucid.wallet.getUtxos();
-  const collateraUTxOs = collateralUTxOs.map(lutxoToUTxO); // Assuming the first UTxO can be used as collateral
+  const collateraUTxOs = collateralUTxOs.map(lutxoToUTxO);
 
   // Constants for update transaction
   const newPrice: bigint = 15_000n; // New price in lovelaces
@@ -184,7 +176,7 @@ test<LucidContext>("Test - (Invalid) {Update} Execution on Listed NFT (Fail Case
     const listedNftUTxO = nftListingOutcome.listedNftUTxO;
 
     // Constants for update transaction
-    const newPrice: number = 15_000; // Price field in the NFT datum that will get overrided by `badPrice`provided by adversary
+    const newPrice: number = 15_000; // Price field in the NFT datum that will get overrided by `badPrice` provided by adversary
 
     lucid.selectWalletFromSeed(users.adversary.seedPhrase);
     const adversaryAddress = Address.fromString(users.adversary.address);
