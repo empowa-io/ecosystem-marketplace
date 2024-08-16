@@ -139,7 +139,7 @@ test<LucidContext>("Test - Valid {Update} Execution on Listed NFT", async ({
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - (Invalid) {Update} Execution on Listed NFT (Fail Case: Updated Datum)", async ({
+test<LucidContext>("Test - Invalid {Update} Execution on Listed NFT (Fail Case: Updated Datum)", async ({
   lucid,
   users,
   emulator,
@@ -262,7 +262,7 @@ test<LucidContext>("Test - Valid {Cancel} Execution on Listed NFT", async ({
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - (Invalid) {Cancel} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
+test<LucidContext>("Test - Invalid {Cancel} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
   lucid,
   users,
   emulator,
