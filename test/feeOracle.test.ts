@@ -9,7 +9,7 @@ import {
   getFeeUpdateTx,
 } from "./utils.ts";
 import { Address } from "@harmoniclabs/plu-ts";
-import { beforeEach, test } from "vitest";
+import { beforeEach, test, expect } from "vitest";
 
 beforeEach<LucidContext>(async (context) => {
   const createUser = async () => {
@@ -28,65 +28,68 @@ beforeEach<LucidContext>(async (context) => {
   context.lucid = await Lucid.new(context.emulator);
 });
 
-test<LucidContext>("Test - Valid Update Fee Oracle", async ({ lucid, users, emulator }) => {
-  try {
-    // Select the signer wallet
-    lucid.selectWalletFromSeed(users.owner);
+test<LucidContext>("Test - Valid Update Fee Oracle", async ({
+  lucid,
+  users,
+  emulator,
+}) => {
+  // Select the signer wallet
+  lucid.selectWalletFromSeed(users.owner.seedPhrase);
 
-    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-      await initiateFeeOracle(emulator, lucid, users.owner, false);
+  const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
-    const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
-    const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
-    
-    const ownerUTxOs = await lucid.wallet.getUtxos();
-    const ownersFirstLUTxO = ownerUTxOs[0];
-    const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
+  const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
+  const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
 
-    const feeUpdateTx = await getFeeUpdateTx(
-      30_000,
-      ownersFirstUTxO,
-      beaconUTxO,
-      feeOracleScriptUTxO,
-      true,
-      false,
-      false
-    );
+  const ownerUTxOs = await lucid.wallet.getUtxos();
+  const ownersFirstLUTxO = ownerUTxOs[0];
+  const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
+  console.log("Owner's first UTxO", ownersFirstUTxO);
 
-    // Sign and submit the fee update transaction
-    const feeUpdateLTx = lucid.fromTx(feeUpdateTx.toCbor().toString());
-    const signedFeeUpdateLTx = await feeUpdateLTx.sign().complete();
-    const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
-    console.log("NFT Tx Hash", feeUpdateTxHash);
+  const feeUpdateTx = await getFeeUpdateTx(
+    30_000,
+    ownersFirstUTxO,
+    beaconUTxO,
+    feeOracleScriptUTxO,
+    true,
+    false
+  );
 
-    // Wait for the transaction
-    emulator.awaitBlock(50);
+  // Sign and submit the fee update transaction
+  const feeUpdateLTx = lucid.fromTx(feeUpdateTx.toCbor().toString());
+  const signedFeeUpdateLTx = await feeUpdateLTx.sign().complete();
+  const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
+  console.log("NFT Tx Hash", feeUpdateTxHash);
 
-    // If we reach this point without throwing, the test passes
-    console.log("Test completed successfully");
-  } catch (error) {
-    console.error("Test failed:", error);
-    throw error; // Re-throw the error to make the test fail
-  }
+  // Wait for the transaction
+  emulator.awaitBlock(50);
+
+  // If we reach this point without throwing, the test passes
+  console.log("Test completed successfully");
 }, 60_000); // Increased timeout to 60 seconds
 
-test<LucidContext>("Test - Invalid Update Fee Oracle"),
-  async ({ lucid, users, emulator }) => {
-
+test<LucidContext>("Test - Invalid Update Fee Oracle", async ({
+  lucid,
+  users,
+  emulator,
+}) => {
+  expect(async () => {
     const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-      await initiateFeeOracle(emulator, lucid, users.owner, false);
+      await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
     const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
     const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
-    
-    lucid.selectWalletFromSeed(users.adversary);
+
+    lucid.selectWalletFromSeed(users.adversary.seedPhrase);
     const adversaryAddr = await lucid.wallet.address();
-    const destinationAddress = Address.fromString(adversaryAddr)
+    const destinationAddress = Address.fromString(adversaryAddr);
 
     const adversaryUTxOs = await lucid.wallet.getUtxos();
     const adversaryFirstLUTxO = adversaryUTxOs[0];
     const adversaryFirstUTxO = lutxoToUTxO(adversaryFirstLUTxO);
-    
+    console.log("Adversary's first UTxO", adversaryFirstUTxO);
+
     // Attempt to update fee and redirect the Beacon UTxO to the adversary's wallet
     const invalidFeeUpdateTx = await getFeeUpdateTx(
       30_000,
@@ -95,18 +98,25 @@ test<LucidContext>("Test - Invalid Update Fee Oracle"),
       feeOracleScriptUTxO,
       true,
       false, // Not using bad datum
-      true, // Attempt to reroute UTxO to adversary's wallet
       destinationAddress // Adversary's wallet address
     );
 
     // Sign and submit the fee update transaction
-    const invalidFeeUpdateLTx = lucid.fromTx(invalidFeeUpdateTx.toCbor().toString());
-    const invalidSignedFeeUpdateLTx = await invalidFeeUpdateLTx.sign().complete();
+    const invalidFeeUpdateLTx = lucid.fromTx(
+      invalidFeeUpdateTx.toCbor().toString()
+    );
+    const invalidSignedFeeUpdateLTx = await invalidFeeUpdateLTx
+      .sign()
+      .complete();
     const invalidFeeUpdateTxHash = await invalidSignedFeeUpdateLTx.submit();
     console.log("NFT Tx Hash", invalidFeeUpdateTxHash);
 
     // Wait for the transaction
     emulator.awaitBlock(50);
-  };
+  }).rejects.toThrow(
+    "Redirecting the Beacon UTxO to the adversary's wallet fails as intended"
+  );
+});
 
-
+// test<LucidContext>("Test - Invalid Update Fee Oracle - Invadalid Datum",
+//  "BadDatum"

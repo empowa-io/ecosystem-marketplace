@@ -214,8 +214,7 @@ export async function getFeeUpdateTx(
   feeOracleSource: UTxO,
   provideTxFee: boolean,
   badDatum: boolean,
-  badReroutedUTxO: boolean,
-  destinationAddress?: Address 
+  destinationAddress?: Address
 ): Promise<Tx> {
   const txBuilder = new TxBuilder(await getProtocolParams());
   const updatedDatum = badDatum ? new DataB(`${newFee}`) : new DataI(newFee);
@@ -235,26 +234,29 @@ export async function getFeeUpdateTx(
     ? [...initialInputs, { utxo: collateral }]
     : initialInputs;
 
-  const outputs =
-    badReroutedUTxO 
-      ? [
-          {
-            address: destinationAddress, // UTxO sitting at the adversary wallet
-            value: feeOracleInput.resolved.value,
-            datum: updatedDatum,
-          },
-        ]
-      : [
-          {
-            address: feeOracleInput.resolved.address, // UTxO sitting at the feeOracleAddr
-            value: feeOracleInput.resolved.value,
-            datum: updatedDatum,
-          },
-        ];
+  const outputs = destinationAddress
+    ? [
+        {
+          address: destinationAddress, // UTxO sitting at the adversary wallet
+          value: feeOracleInput.resolved.value,
+          datum: updatedDatum,
+        },
+      ]
+    : [
+        {
+          address: feeOracleInput.resolved.address, // UTxO sitting at the feeOracleAddr
+          value: feeOracleInput.resolved.value,
+          datum: updatedDatum,
+        },
+      ];
 
   return txBuilder.buildSync({
     inputs,
     collaterals: [collateral],
+    requiredSigners:
+      destinationAddress && !provideTxFee
+        ? [destinationAddress.paymentCreds.hash]
+        : [collateral.resolved.address.paymentCreds.hash], // requiredSigners field is not present in the provided off-chain code but is found necessary through tracing the contract and locating failures
     outputs,
     changeAddress: collateral.resolved.address,
   });
@@ -354,6 +356,19 @@ export async function getListNFTTx(
   sellerAddress: Address
 ): Promise<Tx> {
   const listingTxBuilder = new TxBuilder(await getProtocolParams());
+
+  // console.log("datum", NFTSale.NFTSale({
+  //   price: pDataI(initialListingPrice),
+  //   seller: pData(sellerAddress.toData()),
+  //   policy: pDataB(listNftPolicy),
+  //   tokenName: pDataB(listNftTokenName),
+  // }) )
+
+  // console.log("policy",pDataB(listNftPolicy))
+  // console.log("price",pDataI(initialListingPrice) )
+  // console.log("seller", sellerAddress)
+  // console.log("tokenName", pDataB(listNftTokenName) )
+
   return listingTxBuilder.buildSync({
     inputs: [{ utxo: nftUTxO }],
     collaterals: [nftUTxO],

@@ -25,7 +25,7 @@ import {
   PubKeyHash,
   Address,
 } from "@harmoniclabs/plu-ts";
-import { beforeEach, test } from "vitest";
+import { beforeEach, test, expect } from "vitest";
 
 import { tokenName } from "../app/constants";
 
@@ -70,22 +70,22 @@ test<LucidContext>("Succesfully List NFT on Marketplace", async ({
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
     );
 
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-
+  
   // Select the sellers`s wallet
-  lucid.selectWalletFromSeed(users.seller);
+  lucid.selectWalletFromSeed(users.seller.seedPhrase);
 
   // Find the UTxO containing the NFT to be listed, and convert it into plu-ts format
   const sellerLUTxOs = await lucid.wallet.getUtxos();
@@ -102,6 +102,8 @@ test<LucidContext>("Succesfully List NFT on Marketplace", async ({
   const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTtx
   const initialListingPrice: number = 10_000;
 
+  console.log("sellerAddress", sellerAddress);
+  
   // Build the listing transaction
   const nftListingTx = await getListNFTTx(
     changeAddress,
@@ -120,7 +122,9 @@ test<LucidContext>("Succesfully List NFT on Marketplace", async ({
   console.log("Listed NFT Tx Hash", nftListingTxHash);
 
   emulator.awaitBlock(50);
-});
+
+  console.log("Test completed successfully");
+}, 60_000);
 
 test<LucidContext>("Happy Test - Update the Listed NFT", async ({
   lucid,
@@ -234,7 +238,7 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
     marketplaceSource,
     marketplaceAddress,
     badPrice, // Price field that overrides newPrice field in the NFT datum
-    adversaryAddress, // Adversary Address that is not the owner of the listed NFT from users.seller
+    adversaryAddress // Adversary Address that is not the owner of the listed NFT from users.seller
   );
 
   // Sign and submit the update listing transaction from the sellers wallet
@@ -341,7 +345,9 @@ test<LucidContext>("Unhappy Test - Cancel NFT Listing as adversary", async ({
   );
 
   // Sign and submit the update listing transaction from the seller`s wallet
-  const badCancelListingLTx = lucid.fromTx(badCancelListingTx.toCbor().toString());
+  const badCancelListingLTx = lucid.fromTx(
+    badCancelListingTx.toCbor().toString()
+  );
   const badSignedCancelListingLTx = await badCancelListingLTx.sign().complete();
   const badUpdateCancelListingTxHash = await badSignedCancelListingLTx.submit();
   console.log("Update Listing Tx Hash", badUpdateCancelListingTxHash);
