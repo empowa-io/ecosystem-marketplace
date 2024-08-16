@@ -18,7 +18,7 @@ import {
 } from "@harmoniclabs/plu-ts";
 import { tokenName } from "../app/constants";
 
-test("Test - Single Fee Oracle NFT mint", async () => {
+test("Test - Valid Single Fee Oracle NFT Mint", async () => {
   const userAddress1 = await generateAccountSeedPhrase({
     lovelace: 20_000_000n,
   });
@@ -73,8 +73,8 @@ test("Test - Single Fee Oracle NFT mint", async () => {
   expect(utxosWithUnitFromTx).toStrictEqual(utxosWithUnitFromAddr);
 }, 40_000);
 
-test("Test - Contract does not allow multiple Fee Oracle NFT mints", async () => {
-  try {
+test("Test - (Invalid) Multiple Fee Oracle NFT Mints (Fail Case: Limited to Single Fee Oracle NFT)", async () => {
+  expect(async () => {
     const userAddress1 = await generateAccountSeedPhrase({
       lovelace: 20_000_000n,
     });
@@ -134,7 +134,7 @@ test("Test - Contract does not allow multiple Fee Oracle NFT mints", async () =>
       ],
       changeAddress: plutsUtxos.resolved.address,
     });
-  } catch (error) {
-    console.error(error);
-  }
-}, 40_000);
+  }).rejects.toThrow(
+    "script consumed with Mint redemer and index '0'" // Fail case: Limited to single Fee Oracle NFT
+  );
+});

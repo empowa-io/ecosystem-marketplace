@@ -51,11 +51,6 @@ export type LucidContext = {
   users: any;
   emulator: Emulator;
 };
-
-export const FeeOracleDatumSchema = Data.Integer();
-export type FeeOracleDatum = Data.Static<typeof FeeOracleDatumSchema>;
-export const FeeOracleDatum = FeeOracleDatumSchema as unknown as FeeOracleDatum;
-
 export interface FeeOracleInitiationOutcome {
   feeOracleNftPolicyHash: Hash28;
   feeOracleUTxOs: UTxO[];
@@ -268,7 +263,7 @@ export async function initiateMarketplace(
   lucid: Lucid,
   ownerSeedPhrase: string, //users.owner
   currencyPolicyId: Hash28 | "", // "" for ADA
-  currencyTokenName: string,
+  currencyTokenName: Uint8Array | "", // "" for ADA
   feeOracleInitiationOutcome: FeeOracleInitiationOutcome
 ): Promise<MarketplaceInitiationOutcome> {
   const feeOracleNftPolicyHash =
@@ -283,12 +278,13 @@ export async function initiateMarketplace(
   const [marketplaceRefLUTxO] = initialUTxOs;
   const marketplaceRefUTxO = lutxoToUTxO(marketplaceRefLUTxO);
 
+  const isAda = currencyPolicyId === "";
   // Create the marketplace contract
+  // If we're using ADA, use an empty string for the currency symbol. Otherwise, use the buffer representation of the provided policy ID.
+  // If we're using ADA, use an empty string for the token name. Otherwise, use the provided token name
   const marketplaceScript = makeMarketplace(
-    PCurrencySymbol.from(
-      currencyPolicyId == "" ? "" : currencyPolicyId.toBuffer()
-    ),
-    PTokenName.from(currencyPolicyId == "" ? "" : currencyTokenName),
+    PCurrencySymbol.from(isAda ? "" : currencyPolicyId.toBuffer()),
+    PTokenName.from(isAda ? "" : currencyTokenName),
     PAddress.fromData(pData(Address.fromString(ownerAddr).toData())), // owner of the marketplace
     PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()), // oracleNFTSymbol
     PTokenName.from(tokenName) // oracleNFTname
@@ -408,7 +404,9 @@ export async function listNft(
   const sellerUTxOs = sellerLUTxOs.map(lutxoToUTxO);
   const listingUTxO = sellerUTxOs.find(
     // Assuming multiple UTxOs could be present, we find the one with the NFT
-    (u) => u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === BigInt(1)
+    (u) =>
+      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) ===
+      BigInt(1)
   )!;
 
   // Constants for listing transaction
@@ -432,7 +430,6 @@ export async function listNft(
   const nftListingLTx = lucid.fromTx(nftListingTx.toCbor().toString());
   const signedNftListingLTx = await nftListingLTx.sign().complete();
   const nftListingTxHash = await signedNftListingLTx.submit();
-  console.log("Listed NFT Tx Hash", nftListingTxHash);
 
   // Wait for transaction confirmation
   emulator.awaitBlock(50);
@@ -441,7 +438,9 @@ export async function listNft(
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
   const marketplaceUTxO = marketplaceLUTxOs.map(lutxoToUTxO);
   const listedNftUTxO = marketplaceUTxO.find(
-    (u) => u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === BigInt(1)
+    (u) =>
+      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) ===
+      BigInt(1)
   )!;
 
   return {
@@ -525,7 +524,7 @@ export async function getUpdateListingTx(
   });
 }
 
-export async function getCancelListingTx( //bad path, adversary -> cancel listing
+export async function getCancelListingTx(
   listingUTxO: UTxO,
   collateral: UTxO,
   sellerAddress: Address,
@@ -559,11 +558,13 @@ export async function getBuyListingTx(
   buyer: PubKeyHash | PublicKey | Address, // Choose a type
   listNftPolicy: Uint8Array,
   listNftTokenName_01: Uint8Array,
-  currencyPolicyId: Hash28,
+  currencyPolicyId: "" | Hash28,
   currencyTokenName: Uint8Array, // currently a string needs to be transformed to Uint8Array
   protocolFeeAmt: number | bigint,
   marketplaceOwnerAddress: Address,
-  finalPrice: number | bigint
+  finalPrice: number | bigint,
+  isAda: boolean 
+
 ): Promise<Tx> {
   let buyerPkh: PubKeyHash = undefined as any;
   if (buyer instanceof PubKeyHash) buyerPkh = buyer;
@@ -571,6 +572,19 @@ export async function getBuyListingTx(
   if (buyer instanceof Address) buyerPkh = buyer.paymentCreds.hash;
   if (!buyerPkh)
     throw new Error("unable to derive 'buyerPkh' form " + buyer.toString());
+
+  const createPaymentAssetEntry = (amount: number | bigint) => 
+    isAda
+      ? Value.singleAssetEntry(
+        currencyPolicyId, // "" for ADA
+        currencyTokenName, // "" for ADA
+        amount // field for protocolFeeAmt and finalPrice
+      )
+      : Value.singleAssetEntry(
+          new Hash28(currencyPolicyId),
+          currencyTokenName,
+          amount // field for protocolFeeAmt and finalPrice
+        );
 
   const buyListingTxBuilder = new TxBuilder(await getProtocolParams());
   return await buyListingTxBuilder.buildSync({

@@ -45,7 +45,6 @@ test<LucidContext>("Test - Valid Update Fee Oracle", async ({
   const ownerUTxOs = await lucid.wallet.getUtxos();
   const ownersFirstLUTxO = ownerUTxOs[0];
   const ownersFirstUTxO = lutxoToUTxO(ownersFirstLUTxO);
-  console.log("Owner's first UTxO", ownersFirstUTxO);
 
   const feeUpdateTx = await getFeeUpdateTx(
     30_000,
@@ -60,16 +59,13 @@ test<LucidContext>("Test - Valid Update Fee Oracle", async ({
   const feeUpdateLTx = lucid.fromTx(feeUpdateTx.toCbor().toString());
   const signedFeeUpdateLTx = await feeUpdateLTx.sign().complete();
   const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
-  console.log("NFT Tx Hash", feeUpdateTxHash);
 
   // Wait for the transaction
   emulator.awaitBlock(50);
 
-  // If we reach this point without throwing, the test passes
-  console.log("Test completed successfully");
 }, 60_000); // Increased timeout to 60 seconds
 
-test<LucidContext>("Test - Invalid Update Fee Oracle", async ({
+test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Rerouted Beacon UTxO)", async ({
   lucid,
   users,
   emulator,
@@ -88,7 +84,6 @@ test<LucidContext>("Test - Invalid Update Fee Oracle", async ({
     const adversaryUTxOs = await lucid.wallet.getUtxos();
     const adversaryFirstLUTxO = adversaryUTxOs[0];
     const adversaryFirstUTxO = lutxoToUTxO(adversaryFirstLUTxO);
-    console.log("Adversary's first UTxO", adversaryFirstUTxO);
 
     // Attempt to update fee and redirect the Beacon UTxO to the adversary's wallet
     const invalidFeeUpdateTx = await getFeeUpdateTx(
@@ -109,14 +104,56 @@ test<LucidContext>("Test - Invalid Update Fee Oracle", async ({
       .sign()
       .complete();
     const invalidFeeUpdateTxHash = await invalidSignedFeeUpdateLTx.submit();
-    console.log("NFT Tx Hash", invalidFeeUpdateTxHash);
 
     // Wait for the transaction
     emulator.awaitBlock(50);
   }).rejects.toThrow(
-    "Redirecting the Beacon UTxO to the adversary's wallet fails as intended"
+    "script consumed with Spend redemer and index '1'" // Redirecting the Beacon UTxO to the adversary's wallet fails as intended
   );
 });
 
-// test<LucidContext>("Test - Invalid Update Fee Oracle - Invadalid Datum",
-//  "BadDatum"
+test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Bad Datum)", async ({
+  lucid,
+  users,
+  emulator,
+}) => {
+  expect(async () => {
+    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+      await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
+
+    const feeOracleScriptUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0];
+    const beaconUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1];
+
+    lucid.selectWalletFromSeed(users.adversary.seedPhrase);
+    const adversaryAddr = await lucid.wallet.address();
+    const destinationAddress = Address.fromString(adversaryAddr);
+
+    const adversaryUTxOs = await lucid.wallet.getUtxos();
+    const adversaryFirstLUTxO = adversaryUTxOs[0];
+    const adversaryFirstUTxO = lutxoToUTxO(adversaryFirstLUTxO);
+
+    // Attempt to update fee and redirect the Beacon UTxO to the adversary's wallet
+    const invalidFeeUpdateTx = await getFeeUpdateTx(
+      30_000,
+      adversaryFirstUTxO,
+      beaconUTxO,
+      feeOracleScriptUTxO,
+      true,
+      true, // Creating a bad datum
+    );
+
+    // Sign and submit the fee update transaction
+    const invalidFeeUpdateLTx = lucid.fromTx(
+      invalidFeeUpdateTx.toCbor().toString()
+    );
+    const invalidSignedFeeUpdateLTx = await invalidFeeUpdateLTx
+      .sign()
+      .complete();
+    const invalidFeeUpdateTxHash = await invalidSignedFeeUpdateLTx.submit();
+
+    // Wait for the transaction
+    emulator.awaitBlock(50);
+  }).rejects.toThrow(
+    "script consumed with Spend redemer and index '1'" // Bad Datum fails as intended
+  );
+});

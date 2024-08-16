@@ -45,10 +45,10 @@ beforeEach<LucidContext>(async (context) => {
   };
 
   context.users = {
-    seller: await generateAccountSeedPhrase(sellerAssets), // User, who mints the NFT that will be listed on the Marketplace and then lists it
+    seller: await generateAccountSeedPhrase(sellerAssets), // User, who mints the NFT that will be listed on the Marketplace and lists it
     owner: await createUser(), // User, who mints and deploys the fee oracle and then the marketplace
     buyer: await createUser(), // User, who buys the NFT from the Marketplace
-    adversary: await createUser(), // User for unhappy test paths
+    adversary: await createUser(), // Malicious user for invalid test paths
   };
 
   context.emulator = new Emulator([
@@ -114,8 +114,7 @@ test<LucidContext>("Test - Valid NFT marketplace listing", async ({
   const nftListingLTx = lucid.fromTx(nftListingTx.toCbor().toString());
   const signedNftListingLTx = await nftListingLTx.sign().complete();
   const nftListingTxHash = await signedNftListingLTx.submit();
-  console.log("Valid NFT Listing - TxHash", nftListingTxHash);
-
+  
   emulator.awaitBlock(50);
 }, 60_000);
 
@@ -176,11 +175,11 @@ test<LucidContext>("Test - Valid {Update} execution on Listed NFT", async ({
   const updateListingLTx = lucid.fromTx(updateListingTx.toCbor().toString());
   const signedUpdateListingLTx = await updateListingLTx.sign().complete();
   const updateListingTxHash = await signedUpdateListingLTx.submit();
-  console.log("Valid {Update} Listing - TxHash", updateListingTxHash);
+
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - Invalid {Update} execution on Listed NFT (Fail Case: Updated Datum)", async ({
+test<LucidContext>("Test - (Invalid) {Update} execution on Listed NFT (Fail Case: Updated Datum)", async ({
   lucid,
   users,
   emulator,
@@ -302,11 +301,10 @@ test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
   const cancelListingLTx = lucid.fromTx(cancelListingTx.toCbor().toString());
   const signedCancelListingLTx = await cancelListingLTx.sign().complete();
   const updateCancelListingTxHash = await signedCancelListingLTx.submit();
-  console.log("Valid {Cancel} Listing - TxHash", updateCancelListingTxHash);
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - Invalid {Cancel} execution on Listed NFT (Fail Case: NFT return attempt to adversary wallet", async ({
+test<LucidContext>("Test - (Invalid) {Cancel} execution on Listed NFT (Fail Case: NFT Return Attempt (adversary wallet)", async ({
   lucid,
   users,
   emulator,
@@ -375,15 +373,19 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
     await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
-  const feeOracleUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0]; // UTxO[0] with Fee Oracle NFT
+  const feeOracleUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1]; // UTxO[1] with Fee Oracle NFT (Beacon UTxO)
+
+  const isAda = false; // Set to true to test the marketplace with currency: ADA  / Set to false to test the marketplace with a CNT
+  const currencyPolicyId : "" | Hash28 = isAda ? "" : new Hash28("0462de27174c88689ec9fe0e13777e1ed52285510300796e16b88acf");
+  const currencyTokenName : "" | Uint8Array = isAda ? "" : new Uint8Array(Buffer.from("fakeToken", "utf8"));
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
       users.owner.seedPhrase,
-      "",
-      "currencyTokenName",
+      currencyPolicyId,
+      currencyTokenName,
       feeOracleInitiationOutcome
     );
   const marketplaceOwnerAddress =
@@ -418,10 +420,12 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
   // Price / Fee Operations
   const nftSaleDatum = listedNftUTxO.resolved.datum;
   const feeNumeratorDatum = feeOracleUTxO.resolved.datum;
+
   if (
     !(nftSaleDatum instanceof DataConstr && feeNumeratorDatum instanceof DataI)
   )
     throw "watermelons";
+
   const feeNumerator = feeNumeratorDatum.int;
   const saleFields = nftSaleDatum.fields;
   if (!(saleFields[0] instanceof DataI)) throw "cherrys";
@@ -431,11 +435,6 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
 
   const listNftPolicy = nftListingOutcome.listNftPolicy;
 
-  // Conversions for currencyPolicyId and currencyTokenName
-  const currencyPolicyId = marketplaceInitiationOutcome.currencyPolicyId;
-  const currencyTokenName = marketplaceInitiationOutcome.currencyTokenName;
-
-  // const currencyPolicyIdHash28 = new Hash28(currencyPolicyId);
   // const currencyTokenNameUint8Array = ... ;
 
   // for currencyPolicyId, fake.policy under testnet can be used refer to app/buy.ts or use tokenName under app/constants.ts
@@ -446,22 +445,22 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
     listedNftUTxO,
     marketplaceSource,
     collateralUTxO,
-    returnAddress, // Buyer Address
-    feeOracleUTxO, // UTxO[0] with Fee Oracle NFT
-    buyerPublicKeyHash, // Buyers PubKeyHash | PublicKey | Address, just use Address
+    returnAddress,
+    feeOracleUTxO, // UTxO[1] - Beacon UTxO
+    buyerPublicKeyHash,
     listNftPolicy,
     listNftTokenName_01,
-    currencyPolicyId, // Conversion?
-    currencyTokenName, // Conversion?
+    currencyPolicyId, // Should be either "" | Hash28
+    currencyTokenName, // Should be either "" | Uint8Array
     protocolFeeAmt,
     marketplaceOwnerAddress,
-    finalPrice
+    finalPrice,
+    false
   );
 
   // Sign and submit the update listing transaction from the seller`s wallet
   const buyListingLTx = lucid.fromTx(buyListingTx.toCbor().toString());
   const signedBuyListingLTx = await buyListingLTx.sign().complete();
   const BuyListingTxHash = await signedBuyListingLTx.submit();
-  console.log("Valid {Buy} Listing - TxHash", BuyListingTxHash);
   emulator.awaitBlock(50);
 });
