@@ -64,7 +64,7 @@ beforeEach<LucidContext>(async (context) => {
   context.lucid = await Lucid.new(context.emulator);
 });
 
-test<LucidContext>("Succesfully List NFT on Marketplace", async ({
+test<LucidContext>("Test - Valid NFT marketplace listing ", async ({
   lucid,
   users,
   emulator,
@@ -100,7 +100,7 @@ test<LucidContext>("Succesfully List NFT on Marketplace", async ({
   const sellerAddress = nftUTxO.resolved.address;
   const changeAddress = nftUTxO.resolved.address;
   const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTtx
-  const initialListingPrice: number = 10_000;
+  const initialListingPrice: bigint = 10_000n;
 
   console.log("sellerAddress", sellerAddress);
   
@@ -126,7 +126,7 @@ test<LucidContext>("Succesfully List NFT on Marketplace", async ({
   console.log("Test completed successfully");
 }, 60_000);
 
-test<LucidContext>("Happy Test - Update the Listed NFT", async ({
+test<LucidContext>("Test - Valid {Update} execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
@@ -188,11 +188,12 @@ test<LucidContext>("Happy Test - Update the Listed NFT", async ({
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum adversaryAddress)", async ({
+test<LucidContext>("Test - Invalid {Update} execution on Listed NFT (Fail Case: Updated Datum)", async ({
   lucid,
   users,
   emulator,
 }) => {
+  expect(async () => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
     await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
@@ -209,23 +210,25 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
   const marketplaceSource =
     marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-
+  
   const nftListingOutcome: NftListingOutcome = await listNft(
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller.seedPhrase
+    users.seller.seedPhrase,
+    listNftPolicyHash_01,
+    listNftTokenName_01
   );
 
   const sellerAddress = nftListingOutcome.sellerAddress;
   const listedNftUTxO = nftListingOutcome.listedNftUTxO;
+  
   // Constants for update transaction
-  const newPrice: bigint = 15_000n; // Price field in the NFT datum that will get overrided by `badPrice`provided by adversary
+  const newPrice: number = 15_000; // Price field in the NFT datum that will get overrided by `badPrice`provided by adversary
 
-  // Unhappy Path - 1, Try to update price with 0 lovelaces as adversary
   lucid.selectWalletFromSeed(users.adversary.seedPhrase);
   const adversaryAddress = Address.fromString(users.adversary.address);
-  const badPrice = 0n;
+  const badPrice : number = 0;
   const badPolicyHash = new Hash28(generate56CharHex());
   // const badPolicy = badPolicyHash.toBuffer();
   // const badTokenName = generateRandomTokenName();
@@ -252,9 +255,12 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
   const badUpdateListingTxHash = await signedBadUpdateListingLTx.submit();
 
   emulator.awaitBlock(50);
+}).rejects.toThrow(
+  "script consumed with Spend redemer and index '1'" // Expected error message from the emulator due to invalid Datum
+);
 });
 
-test<LucidContext>("Test - Cancel the NFT Listing", async ({
+test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
@@ -305,7 +311,7 @@ test<LucidContext>("Test - Cancel the NFT Listing", async ({
   emulator.awaitBlock(50);
 });
 
-test<LucidContext>("Unhappy Test - Cancel NFT Listing as adversary", async ({
+test<LucidContext>("Test - Invalid {Cancel} execution on Listed NFT (Fail Case: NFT return attempt to adversary wallet", async ({
   lucid,
   users,
   emulator,
@@ -358,7 +364,7 @@ test<LucidContext>("Unhappy Test - Cancel NFT Listing as adversary", async ({
   emulator.awaitBlock(50);
 });
 
-test<LucidContext>("Test - Buy the NFT Listing", async ({
+test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
