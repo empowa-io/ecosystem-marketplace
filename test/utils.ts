@@ -357,18 +357,6 @@ export async function getListNFTTx(
 ): Promise<Tx> {
   const listingTxBuilder = new TxBuilder(await getProtocolParams());
 
-  // console.log("datum", NFTSale.NFTSale({
-  //   price: pDataI(initialListingPrice),
-  //   seller: pData(sellerAddress.toData()),
-  //   policy: pDataB(listNftPolicy),
-  //   tokenName: pDataB(listNftTokenName),
-  // }) )
-
-  // console.log("policy",pDataB(listNftPolicy))
-  // console.log("price",pDataI(initialListingPrice) )
-  // console.log("seller", sellerAddress)
-  // console.log("tokenName", pDataB(listNftTokenName) )
-
   return listingTxBuilder.buildSync({
     inputs: [{ utxo: nftUTxO }],
     collaterals: [nftUTxO],
@@ -390,7 +378,7 @@ export async function getListNFTTx(
         datum: NFTSale.NFTSale({
           policy: pDataB(listNftPolicy),
           price: pDataI(initialListingPrice),
-          seller: pData(sellerAddress.toData()),
+          seller: pDataB(sellerAddress.paymentCreds.hash.toString()),
           tokenName: pDataB(listNftTokenName),
         }),
       },
@@ -426,7 +414,7 @@ export async function listNft(
   const sellerUTxOs = sellerLUTxOs.map(lutxoToUTxO);
   const listingUTxO = sellerUTxOs.find(
     // Assuming multiple UTxOs could be present, we find the one with the NFT
-    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === 1n
+    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === BigInt(1)
   )!;
 
   // Constants for listing transaction
@@ -457,9 +445,9 @@ export async function listNft(
 
   // Find the UTxO of the listed NFT on the marketplace
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
-  const marketplaceUTxO = await marketplaceLUTxOs.map(lutxoToUTxO);
+  const marketplaceUTxO = marketplaceLUTxOs.map(lutxoToUTxO);
   const listedNftUTxO = marketplaceUTxO.find(
-    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === 1n
+    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === BigInt(1)
   )!;
 
   return {

@@ -132,13 +132,13 @@ test<LucidContext>("Happy Test - Update the Listed NFT", async ({
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
@@ -152,13 +152,13 @@ test<LucidContext>("Happy Test - Update the Listed NFT", async ({
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller
+    users.seller.seedPhrase
   );
 
   const sellerAddress = nftListingOutcome.sellerAddress;
   const listedNftUTxO = nftListingOutcome.listedNftUTxO;
 
-  lucid.selectWalletFromSeed(users.seller);
+  lucid.selectWalletFromSeed(users.seller.seedPhrase);
 
   // Get a collateral UTxO from the seller's wallet
   const collateralUTxOs = await lucid.wallet.getUtxos();
@@ -191,13 +191,13 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
@@ -211,7 +211,7 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller
+    users.seller.seedPhrase
   );
 
   const sellerAddress = nftListingOutcome.sellerAddress;
@@ -220,7 +220,7 @@ test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum a
   const newPrice: bigint = 15_000n; // Price field in the NFT datum that will get overrided by `badPrice`provided by adversary
 
   // Unhappy Path - 1, Try to update price with 0 lovelaces as adversary
-  lucid.selectWalletFromSeed(users.adversary);
+  lucid.selectWalletFromSeed(users.adversary.seedPhrase);
   const adversaryAddress = Address.fromString(users.adversary.address);
   const badPrice = 0n;
   const badPolicyHash = new Hash28(generate56CharHex());
@@ -257,13 +257,13 @@ test<LucidContext>("Test - Cancel the NFT Listing", async ({
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
@@ -273,14 +273,14 @@ test<LucidContext>("Test - Cancel the NFT Listing", async ({
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller
+    users.seller.seedPhrase
   );
   const listingUTxO = nftListingOutcome.listedNftUTxO;
   const marketplaceSource =
     marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
   const sellerAddress = nftListingOutcome.sellerAddress;
 
-  lucid.selectWalletFromSeed(users.seller);
+  lucid.selectWalletFromSeed(users.seller.seedPhrase);
 
   // Get a collateral UTxO from the seller's wallet
   const collateralUTxOs = await lucid.wallet.getUtxos();
@@ -308,13 +308,13 @@ test<LucidContext>("Unhappy Test - Cancel NFT Listing as adversary", async ({
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
@@ -326,11 +326,11 @@ test<LucidContext>("Unhappy Test - Cancel NFT Listing as adversary", async ({
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller
+    users.seller.seedPhrase
   );
   const listingUTxO = nftListingOutcome.listedNftUTxO;
 
-  lucid.selectWalletFromSeed(users.adversary);
+  lucid.selectWalletFromSeed(users.adversary.seedPhrase);
   const adversaryAddress = Address.fromString(users.adversary.address);
 
   // Get a collateral UTxO from the adversary's wallet
@@ -361,7 +361,7 @@ test<LucidContext>("Test - Buy the NFT Listing", async ({
   emulator,
 }) => {
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner, false);
+    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
   const feeOracleUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[0]; // UTxO[0] with Fee Oracle NFT
 
@@ -369,7 +369,7 @@ test<LucidContext>("Test - Buy the NFT Listing", async ({
     await initiateMarketplace(
       emulator,
       lucid,
-      users.owner,
+      users.owner.seedPhrase,
       "",
       "currencyTokenName",
       feeOracleInitiationOutcome
@@ -381,7 +381,7 @@ test<LucidContext>("Test - Buy the NFT Listing", async ({
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller
+    users.seller.seedPhrase
   );
   const listNftPolicyHash_01 = nftListingOutcome.nftPolicyHash;
   const listNftTokenName_01 = nftListingOutcome.nftTokenName;
@@ -390,9 +390,9 @@ test<LucidContext>("Test - Buy the NFT Listing", async ({
     marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
 
   // Setup users.buyer
-  lucid.selectWalletFromSeed(users.buyer);
+  lucid.selectWalletFromSeed(users.buyer.seedPhrase);
   const buyerAddress = Address.fromString(users.buyer.address);
-  const buyerPaymentCredential = lucid.utils.paymentCredentialOf(users.buyer);
+  const buyerPaymentCredential = lucid.utils.paymentCredentialOf(users.buyer.address);
   const buyerPublicKeyHash = new PubKeyHash(buyerPaymentCredential.hash);
   const returnAddress = buyerAddress;
 
