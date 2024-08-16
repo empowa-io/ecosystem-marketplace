@@ -76,8 +76,8 @@ export interface MarketplaceInitiationOutcome {
 export interface NftListingOutcome {
   sellerAddress: Address;
   listedNftUTxO: UTxO;
-  nftPolicyHash: Hash28;
-  nftTokenName: Uint8Array;
+  listNftPolicy: Uint8Array;
+  listNftTokenName_01: Uint8Array;
 }
 
 export async function initiateFeeOracle(
@@ -395,36 +395,26 @@ export async function listNft(
   emulator: Emulator,
   lucid: Lucid,
   marketplaceInitiationOutcome: MarketplaceInitiationOutcome,
-  sellerSeedPhrase: string // users.seller, who lists the NFT on the marketplace
+  sellerSeedPhrase: string, // users.seller, who lists the NFT on the marketplace
+  listNftPolicyHash_01: Hash28,
+  listNftTokenName_01: Uint8Array
 ): Promise<NftListingOutcome> {
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
 
-  // Select the sellers`s wallet
   lucid.selectWalletFromSeed(sellerSeedPhrase);
-
-  // // Listing NFT constants
-  // const policyHash_01 = generate56CharHex();
-  // const tokenName_01 = generateRandomTokenName();
-  // const unit_01 = policyHash_01 + tokenName_01 ;
-
-  // Listing NFT constants
-  const nftPolicyHash = new Hash28(generate56CharHex());
-  const nftTokenName = generateRandomTokenName();
-  const unit_01 =
-    nftPolicyHash.toString() + Buffer.from(nftTokenName).toString("hex");
 
   // Find the UTxO containing the minted NFT to be listed, and convert it into plu-ts format
   const sellerLUTxOs = await lucid.wallet.getUtxos();
   const sellerUTxOs = sellerLUTxOs.map(lutxoToUTxO);
   const listingUTxO = sellerUTxOs.find(
     // Assuming multiple UTxOs could be present, we find the one with the NFT
-    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === BigInt(1)
+    (u) => u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === BigInt(1)
   )!;
 
   // Constants for listing transaction
   const sellerAddress = listingUTxO.resolved.address;
   const changeAddress = listingUTxO.resolved.address;
-  const listNftPolicy = nftPolicyHash.toBuffer(); // in Uint8Array format required for getListNFTTx
+  const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTTx
   const initialListingPrice: number = 10_000;
 
   // Build the listing transaction
@@ -432,7 +422,7 @@ export async function listNft(
     changeAddress,
     listingUTxO, //UTxO containing the NFT to be listed
     marketplaceAddress,
-    nftTokenName, // Uint8Array
+    listNftTokenName_01, // Uint8Array
     listNftPolicy, // Uint8Array
     initialListingPrice,
     sellerAddress
@@ -451,14 +441,14 @@ export async function listNft(
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
   const marketplaceUTxO = marketplaceLUTxOs.map(lutxoToUTxO);
   const listedNftUTxO = marketplaceUTxO.find(
-    (u) => u.resolved.value.get(nftPolicyHash, nftTokenName) === BigInt(1)
+    (u) => u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === BigInt(1)
   )!;
 
   return {
     listedNftUTxO, // For update test
     sellerAddress, // For update test, cancel test
-    nftPolicyHash, // For buy test
-    nftTokenName, // For buy test
+    listNftPolicy, // For buy test
+    listNftTokenName_01, // For buy test
   };
 }
 

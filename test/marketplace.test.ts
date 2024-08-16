@@ -147,12 +147,15 @@ test<LucidContext>("Happy Test - Update the Listed NFT", async ({
   const marketplaceSource =
     marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
+  console.log("Marketplace Address", marketplaceAddress);
 
   const nftListingOutcome: NftListingOutcome = await listNft(
     emulator,
     lucid,
     marketplaceInitiationOutcome,
-    users.seller.seedPhrase
+    users.seller.seedPhrase,
+    listNftPolicyHash_01,
+    listNftTokenName_01
   );
 
   const sellerAddress = nftListingOutcome.sellerAddress;
@@ -181,9 +184,9 @@ test<LucidContext>("Happy Test - Update the Listed NFT", async ({
   const updateListingLTx = lucid.fromTx(updateListingTx.toCbor().toString());
   const signedUpdateListingLTx = await updateListingLTx.sign().complete();
   const updateListingTxHash = await signedUpdateListingLTx.submit();
-
+  console.log("Update Listing Tx Hash", updateListingTxHash);
   emulator.awaitBlock(50);
-});
+}, 60_000);
 
 test<LucidContext>("Unhappy Test - Update the Listed NFT (Fail - Updated Datum adversaryAddress)", async ({
   lucid,
