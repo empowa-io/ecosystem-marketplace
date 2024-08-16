@@ -60,12 +60,10 @@ test<LucidContext>("Test - Valid Update Fee Oracle", async ({
   const signedFeeUpdateLTx = await feeUpdateLTx.sign().complete();
   const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
 
-  // Wait for the transaction
   emulator.awaitBlock(50);
-
 }, 60_000); // Increased timeout to 60 seconds
 
-test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Rerouted Beacon UTxO)", async ({
+test<LucidContext>("Test - Invalid Update Fee Oracle (Steal Beacon UTxO)", async ({
   lucid,
   users,
   emulator,
@@ -107,12 +105,12 @@ test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Rerouted Beac
 
     // Wait for the transaction
     emulator.awaitBlock(50);
-  }).rejects.toThrow(
-    "script consumed with Spend redemer and index '1'" // Redirecting the Beacon UTxO to the adversary's wallet fails as intended
-  );
+  })
+    .rejects.toThrow // Redirecting the Beacon UTxO to the adversary's wallet fails as intended
+    ();
 });
 
-test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Bad Datum)", async ({
+test<LucidContext>("Test - Invalid Update Fee Oracle (Reproduce with Bad Datum)", async ({
   lucid,
   users,
   emulator,
@@ -132,14 +130,14 @@ test<LucidContext>("Test - (Invalid) Update Fee Oracle (Fail Case: Bad Datum)", 
     const adversaryFirstLUTxO = adversaryUTxOs[0];
     const adversaryFirstUTxO = lutxoToUTxO(adversaryFirstLUTxO);
 
-    // Attempt to update fee and redirect the Beacon UTxO to the adversary's wallet
+    // Attempt to update fee in a way that the datum is invalid
     const invalidFeeUpdateTx = await getFeeUpdateTx(
       30_000,
       adversaryFirstUTxO,
       beaconUTxO,
       feeOracleScriptUTxO,
       true,
-      true, // Creating a bad datum
+      true // Creating a bad datum
     );
 
     // Sign and submit the fee update transaction

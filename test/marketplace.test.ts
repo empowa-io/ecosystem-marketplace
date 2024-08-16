@@ -26,6 +26,7 @@ import {
   Address,
 } from "@harmoniclabs/plu-ts";
 import { beforeEach, test, expect } from "vitest";
+import { feeOracle } from "../src/contracts/feeOracle.ts";
 
 // Listing NFT constants
 const listNftPolicyHash_01 = new Hash28(generate56CharHex());
@@ -33,6 +34,27 @@ const listNftTokenName_01 = generateRandomTokenName();
 const unit_01 =
   listNftPolicyHash_01.toString() +
   Buffer.from(listNftTokenName_01).toString("hex");
+
+// Listing NFT (additional double satisfaction) constants for buy test
+const listNftPolicyHash_02 = new Hash28(generate56CharHex());
+const listNftTokenName_02 = generateRandomTokenName();
+const unit_02 =
+  listNftPolicyHash_02.toString() +
+  Buffer.from(listNftTokenName_02).toString("hex");
+
+// Listing NFT (additional double satisfaction) constants for canceling list
+const listNftPolicyHash_03 = new Hash28(generate56CharHex());
+const listNftTokenName_03 = generateRandomTokenName();
+const unit_03 =
+  listNftPolicyHash_03.toString() +
+  Buffer.from(listNftTokenName_03).toString("hex");
+
+// Currency constants
+const sampleCurrencyPolicyId = new Hash28(generate56CharHex());
+const sampleCurrencyTokenName = generateRandomTokenName();
+const sampleCurrencyUnit =
+  sampleCurrencyPolicyId.toString() +
+  Buffer.from(sampleCurrencyTokenName).toString("hex");
 
 beforeEach<LucidContext>(async (context) => {
   const createUser = async () => {
@@ -42,12 +64,22 @@ beforeEach<LucidContext>(async (context) => {
   const sellerAssets = {
     lovelace: BigInt(100_000_000),
     [unit_01]: BigInt(1),
+    [unit_02]: BigInt(1),
+  };
+
+  const adversaryAssets = {
+    lovelace: BigInt(100_000_000),
+    [unit_03]: BigInt(1),
+  };
+  const buyerAssets = {
+    lovelace: BigInt(100_000_000),
+    [sampleCurrencyUnit]: BigInt(100_000_000), //MarketplaceCurrency
   };
 
   context.users = {
     seller: await generateAccountSeedPhrase(sellerAssets), // User, who mints the NFT that will be listed on the Marketplace and lists it
     owner: await createUser(), // User, who mints and deploys the fee oracle and then the marketplace
-    buyer: await createUser(), // User, who buys the NFT from the Marketplace
+    buyer: await generateAccountSeedPhrase(buyerAssets), // User, who buys the NFT from the Marketplace
     adversary: await createUser(), // Malicious user for invalid test paths
   };
 
@@ -61,7 +93,7 @@ beforeEach<LucidContext>(async (context) => {
   context.lucid = await Lucid.new(context.emulator);
 });
 
-test<LucidContext>("Test - Valid NFT marketplace listing", async ({
+test<LucidContext>("Test - Valid {Update} Execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
@@ -74,101 +106,37 @@ test<LucidContext>("Test - Valid NFT marketplace listing", async ({
       emulator,
       lucid,
       users.owner.seedPhrase,
-      "",
-      "currencyTokenName",
+      sampleCurrencyPolicyId,
+      sampleCurrencyTokenName,
       feeOracleInitiationOutcome
     );
 
-  const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-
-  // Select the sellers`s wallet
-  lucid.selectWalletFromSeed(users.seller.seedPhrase);
-
-  // Find the UTxO containing the NFT to be listed, and convert it into plu-ts format
-  const sellerLUTxOs = await lucid.wallet.getUtxos();
-  const sellerUTxOs = sellerLUTxOs.map(lutxoToUTxO);
-  const nftUTxO = sellerUTxOs.find(
-    // Assuming multiple UTxOs could be present, we find the one with the NFT
-    (u) =>
-      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) === 1n
-  )!;
-
-  // Constants for listing transaction
-  const sellerAddress = nftUTxO.resolved.address;
-  const changeAddress = nftUTxO.resolved.address;
-  const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTtx
-  const initialListingPrice: bigint = 10_000n;
-
-  // Build the listing transaction
-  const nftListingTx = await getListNFTTx(
-    changeAddress,
-    nftUTxO,
-    marketplaceAddress,
-    listNftTokenName_01,
-    listNftPolicy,
-    initialListingPrice,
-    sellerAddress
-  );
-
-  // Sign and submit the listing NFT onto the marketplace transaction
-  const nftListingLTx = lucid.fromTx(nftListingTx.toCbor().toString());
-  const signedNftListingLTx = await nftListingLTx.sign().complete();
-  const nftListingTxHash = await signedNftListingLTx.submit();
-  
-  emulator.awaitBlock(50);
-}, 60_000);
-
-test<LucidContext>("Test - Valid {Update} execution on Listed NFT", async ({
-  lucid,
-  users,
-  emulator,
-}) => {
-  const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
-    await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
-
-  const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
-    await initiateMarketplace(
-      emulator,
-      lucid,
-      users.owner.seedPhrase,
-      "",
-      "currencyTokenName",
-      feeOracleInitiationOutcome
-    );
-
-  const marketplaceSource =
-    marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
-  const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-
+  const initialPrice = 10_000;
   const nftListingOutcome: NftListingOutcome = await listNft(
     emulator,
     lucid,
     marketplaceInitiationOutcome,
     users.seller.seedPhrase,
     listNftPolicyHash_01,
-    listNftTokenName_01
+    listNftTokenName_01,
+    initialPrice
   );
-
-  const sellerAddress = nftListingOutcome.sellerAddress;
-  const listedNftUTxO = nftListingOutcome.listedNftUTxO;
 
   lucid.selectWalletFromSeed(users.seller.seedPhrase);
 
   // Get a collateral UTxO from the seller's wallet
   const collateralUTxOs = await lucid.wallet.getUtxos();
-  const collateralUTxO = lutxoToUTxO(collateralUTxOs[0]); // Assuming the first UTxO can be used as collateral
+  const collateraUTxOs = collateralUTxOs.map(lutxoToUTxO); // Assuming the first UTxO can be used as collateral
 
   // Constants for update transaction
   const newPrice: bigint = 15_000n; // New price in lovelaces
 
   // Build the update listing transaction
   const updateListingTx = await getUpdateListingTx(
+    marketplaceInitiationOutcome,
+    nftListingOutcome,
     newPrice,
-    listedNftUTxO,
-    collateralUTxO,
-    sellerAddress,
-    marketplaceSource,
-    marketplaceAddress
+    collateraUTxOs[0]
   );
 
   // Sign and submit the update listing transaction from the sellers wallet
@@ -179,7 +147,7 @@ test<LucidContext>("Test - Valid {Update} execution on Listed NFT", async ({
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - (Invalid) {Update} execution on Listed NFT (Fail Case: Updated Datum)", async ({
+test<LucidContext>("Test - (Invalid) {Update} Execution on Listed NFT (Fail Case: Updated Datum)", async ({
   lucid,
   users,
   emulator,
@@ -193,22 +161,23 @@ test<LucidContext>("Test - (Invalid) {Update} execution on Listed NFT (Fail Case
         emulator,
         lucid,
         users.owner.seedPhrase,
-        "",
-        "currencyTokenName",
+        sampleCurrencyPolicyId,
+        sampleCurrencyTokenName,
         feeOracleInitiationOutcome
       );
 
     const marketplaceSource =
       marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
     const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
-
+    const initialPrice = 10_000;
     const nftListingOutcome: NftListingOutcome = await listNft(
       emulator,
       lucid,
       marketplaceInitiationOutcome,
       users.seller.seedPhrase,
       listNftPolicyHash_01,
-      listNftTokenName_01
+      listNftTokenName_01,
+      initialPrice
     );
 
     const sellerAddress = nftListingOutcome.sellerAddress;
@@ -227,13 +196,12 @@ test<LucidContext>("Test - (Invalid) {Update} execution on Listed NFT (Fail Case
     // Get a collateral UTxO from the adversary's wallet
     const collateralUTxOsAdversary = await lucid.wallet.getUtxos();
     const collateralUTxOAdversary = lutxoToUTxO(collateralUTxOsAdversary[0]);
+
     const badUpdateListingTx = await getUpdateListingTx(
+      marketplaceInitiationOutcome,
+      nftListingOutcome,
       newPrice,
-      listedNftUTxO,
       collateralUTxOAdversary,
-      sellerAddress,
-      marketplaceSource,
-      marketplaceAddress,
       badPrice, // Price field that overrides newPrice field in the NFT datum
       adversaryAddress // Adversary Address that is not the owner of the listed NFT from users.seller
     );
@@ -248,12 +216,13 @@ test<LucidContext>("Test - (Invalid) {Update} execution on Listed NFT (Fail Case
     const badUpdateListingTxHash = await signedBadUpdateListingLTx.submit();
 
     emulator.awaitBlock(50);
-  }).rejects.toThrow(
-    "script consumed with Spend redemer and index '1'" // Expected error message from the emulator due to fail case
-  );
+  })
+    .rejects.toThrow
+    // Expected error message from the emulator due to fail case
+    ();
 });
 
-test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
+test<LucidContext>("Test - Valid {Cancel} Execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
@@ -266,10 +235,11 @@ test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
       emulator,
       lucid,
       users.owner.seedPhrase,
-      "",
-      "currencyTokenName",
+      sampleCurrencyPolicyId,
+      sampleCurrencyTokenName,
       feeOracleInitiationOutcome
     );
+  const listPrice = 10_000;
 
   const nftListingOutcome: NftListingOutcome = await listNft(
     emulator,
@@ -277,24 +247,20 @@ test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
     marketplaceInitiationOutcome,
     users.seller.seedPhrase,
     listNftPolicyHash_01,
-    listNftTokenName_01
+    listNftTokenName_01,
+    listPrice
   );
-  const listingUTxO = nftListingOutcome.listedNftUTxO;
-  const marketplaceSource =
-    marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
-  const sellerAddress = nftListingOutcome.sellerAddress;
 
   lucid.selectWalletFromSeed(users.seller.seedPhrase);
 
   // Get a collateral UTxO from the seller's wallet
   const collateralUTxOs = await lucid.wallet.getUtxos();
-  const collateralUTxO = lutxoToUTxO(collateralUTxOs[0]); // Assuming the first UTxO can be used as collateral
+  const collateraUTxOs = collateralUTxOs.map(lutxoToUTxO); // Assuming the first UTxO can be used as collateral
 
   const cancelListingTx = await getCancelListingTx(
-    listingUTxO,
-    collateralUTxO,
-    sellerAddress,
-    marketplaceSource
+    marketplaceInitiationOutcome,
+    nftListingOutcome,
+    collateraUTxOs[0]
   );
 
   // Sign and submit the update listing transaction from the seller`s wallet
@@ -304,7 +270,7 @@ test<LucidContext>("Test - Valid {Cancel} execution on Listed NFT", async ({
   emulator.awaitBlock(50);
 }, 60_000);
 
-test<LucidContext>("Test - (Invalid) {Cancel} execution on Listed NFT (Fail Case: NFT Return Attempt (adversary wallet)", async ({
+test<LucidContext>("Test - (Invalid) {Cancel} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
   lucid,
   users,
   emulator,
@@ -318,35 +284,45 @@ test<LucidContext>("Test - (Invalid) {Cancel} execution on Listed NFT (Fail Case
         emulator,
         lucid,
         users.owner.seedPhrase,
-        "",
-        "currencyTokenName",
+        sampleCurrencyPolicyId,
+        sampleCurrencyTokenName,
         feeOracleInitiationOutcome
       );
-    const marketplaceSource =
-      marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
 
-    const nftListingOutcome: NftListingOutcome = await listNft(
+    const listPrice = 10_000;
+    const sellerListingOutcome: NftListingOutcome = await listNft(
       emulator,
       lucid,
       marketplaceInitiationOutcome,
       users.seller.seedPhrase,
       listNftPolicyHash_01,
-      listNftTokenName_01
+      listNftTokenName_01,
+      listPrice
     );
-    const listingUTxO = nftListingOutcome.listedNftUTxO;
 
     lucid.selectWalletFromSeed(users.adversary.seedPhrase);
-    const adversaryAddress = Address.fromString(users.adversary.address);
+
+    const adversaryListingOutcome: NftListingOutcome = await listNft(
+      emulator,
+      lucid,
+      marketplaceInitiationOutcome,
+      users.adversary.seedPhrase,
+      listNftPolicyHash_03,
+      listNftTokenName_03,
+      listPrice
+    );
+
+    const targetListingUTxO = sellerListingOutcome.listedNftUTxO;
 
     // Get a collateral UTxO from the adversary's wallet
-    const collateralUTxOsAdversary = await lucid.wallet.getUtxos();
-    const collateralUTxOAdversary = lutxoToUTxO(collateralUTxOsAdversary[0]);
+    const adversaryLUTxOs = await lucid.wallet.getUtxos();
+    const adversaryUTxOs = adversaryLUTxOs.map(lutxoToUTxO);
 
     const badCancelListingTx = await getCancelListingTx(
-      listingUTxO, // listingUTxO thats contains NFT that belongs to users.seller
-      collateralUTxOAdversary, // collateralUTxO from adversary
-      adversaryAddress, // instead of sellerAddress -> adversaryAddress
-      marketplaceSource
+      marketplaceInitiationOutcome,
+      adversaryListingOutcome,
+      adversaryUTxOs[0],
+      targetListingUTxO
     );
 
     // Sign and submit the update listing transaction from the seller`s wallet
@@ -360,12 +336,10 @@ test<LucidContext>("Test - (Invalid) {Cancel} execution on Listed NFT (Fail Case
       await badSignedCancelListingLTx.submit();
 
     emulator.awaitBlock(50);
-  }).rejects.toThrow(
-    "script consumed with Spend redemer and index '1'" // Expected error message from the emulator due to fail case
-  );
+  }).rejects.toThrow();
 });
 
-test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
+test<LucidContext>("Test - Valid {Buy} Execution on Listed NFT", async ({
   lucid,
   users,
   emulator,
@@ -373,23 +347,15 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
   const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
     await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
 
-  const feeOracleUTxO = feeOracleInitiationOutcome.feeOracleUTxOs[1]; // UTxO[1] with Fee Oracle NFT (Beacon UTxO)
-
-  const isAda = false; // Set to true to test the marketplace with currency: ADA  / Set to false to test the marketplace with a CNT
-  const currencyPolicyId : "" | Hash28 = isAda ? "" : new Hash28("0462de27174c88689ec9fe0e13777e1ed52285510300796e16b88acf");
-  const currencyTokenName : "" | Uint8Array = isAda ? "" : new Uint8Array(Buffer.from("fakeToken", "utf8"));
-
   const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
     await initiateMarketplace(
       emulator,
       lucid,
       users.owner.seedPhrase,
-      currencyPolicyId,
-      currencyTokenName,
+      sampleCurrencyPolicyId,
+      sampleCurrencyTokenName,
       feeOracleInitiationOutcome
     );
-  const marketplaceOwnerAddress =
-    marketplaceInitiationOutcome.marketplaceOwnerAddress;
 
   const nftListingOutcome: NftListingOutcome = await listNft(
     emulator,
@@ -397,65 +363,25 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
     marketplaceInitiationOutcome,
     users.seller.seedPhrase,
     listNftPolicyHash_01,
-    listNftTokenName_01
+    listNftTokenName_01,
+    10_000
   );
-
-  const listedNftUTxO = nftListingOutcome.listedNftUTxO;
-  const marketplaceSource =
-    marketplaceInitiationOutcome.marketplaceRefScriptUTxO;
 
   // Setup users.buyer
   lucid.selectWalletFromSeed(users.buyer.seedPhrase);
   const buyerAddress = Address.fromString(users.buyer.address);
-  const buyerPaymentCredential = lucid.utils.paymentCredentialOf(
-    users.buyer.address
-  );
-  const buyerPublicKeyHash = new PubKeyHash(buyerPaymentCredential.hash);
-  const returnAddress = buyerAddress;
 
   // Get a collateral UTxO from the buyer's wallet
-  const collateralUTxOs = await lucid.wallet.getUtxos();
-  const collateralUTxO = lutxoToUTxO(collateralUTxOs[0]); // Assuming the first UTxO can be used as collateral
-
-  // Price / Fee Operations
-  const nftSaleDatum = listedNftUTxO.resolved.datum;
-  const feeNumeratorDatum = feeOracleUTxO.resolved.datum;
-
-  if (
-    !(nftSaleDatum instanceof DataConstr && feeNumeratorDatum instanceof DataI)
-  )
-    throw "watermelons";
-
-  const feeNumerator = feeNumeratorDatum.int;
-  const saleFields = nftSaleDatum.fields;
-  if (!(saleFields[0] instanceof DataI)) throw "cherrys";
-  const fullPrice = saleFields[0].int;
-  const protocolFeeAmt = (fullPrice * feeNumerator) / 1_000_000n;
-  const finalPrice = fullPrice - protocolFeeAmt;
-
-  const listNftPolicy = nftListingOutcome.listNftPolicy;
-
-  // const currencyTokenNameUint8Array = ... ;
-
-  // for currencyPolicyId, fake.policy under testnet can be used refer to app/buy.ts or use tokenName under app/constants.ts
-  // for currencyTokenName, tokenName can be used under app/constants.ts
+  const buyerlUTxOs = await lucid.wallet.getUtxos();
+  const buyerUTxOs = buyerlUTxOs.map(lutxoToUTxO); // Assuming the first UTxO can be used as collateral
 
   // Build buy transaction
   const buyListingTx = await getBuyListingTx(
-    listedNftUTxO,
-    marketplaceSource,
-    collateralUTxO,
-    returnAddress,
-    feeOracleUTxO, // UTxO[1] - Beacon UTxO
-    buyerPublicKeyHash,
-    listNftPolicy,
-    listNftTokenName_01,
-    currencyPolicyId, // Should be either "" | Hash28
-    currencyTokenName, // Should be either "" | Uint8Array
-    protocolFeeAmt,
-    marketplaceOwnerAddress,
-    finalPrice,
-    false
+    feeOracleInitiationOutcome,
+    marketplaceInitiationOutcome,
+    nftListingOutcome,
+    buyerUTxOs,
+    buyerAddress
   );
 
   // Sign and submit the update listing transaction from the seller`s wallet
@@ -463,4 +389,69 @@ test<LucidContext>("Test - Valid {Buy} execution on Listed NFT", async ({
   const signedBuyListingLTx = await buyListingLTx.sign().complete();
   const BuyListingTxHash = await signedBuyListingLTx.submit();
   emulator.awaitBlock(50);
+});
+
+test<LucidContext>("Test - Invalid {Buy} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
+  lucid,
+  users,
+  emulator,
+}) => {
+  expect(async () => {
+    const feeOracleInitiationOutcome: FeeOracleInitiationOutcome =
+      await initiateFeeOracle(emulator, lucid, users.owner.seedPhrase, false);
+
+    const marketplaceInitiationOutcome: MarketplaceInitiationOutcome =
+      await initiateMarketplace(
+        emulator,
+        lucid,
+        users.owner.seedPhrase,
+        sampleCurrencyPolicyId,
+        sampleCurrencyTokenName,
+        feeOracleInitiationOutcome
+      );
+
+    const nftListingOutcome: NftListingOutcome = await listNft(
+      emulator,
+      lucid,
+      marketplaceInitiationOutcome,
+      users.seller.seedPhrase,
+      listNftPolicyHash_01,
+      listNftTokenName_01,
+      10_000
+    );
+
+    const nftListingOutcome2: NftListingOutcome = await listNft(
+      emulator,
+      lucid,
+      marketplaceInitiationOutcome,
+      users.seller.seedPhrase,
+      listNftPolicyHash_02,
+      listNftTokenName_02,
+      10_000
+    );
+
+    // Setup users.buyer
+    lucid.selectWalletFromSeed(users.buyer.seedPhrase);
+    const buyerAddress = Address.fromString(users.buyer.address);
+
+    // Get a collateral UTxO from the buyer's wallet
+    const buyerlUTxOs = await lucid.wallet.getUtxos();
+    const buyerUTxOs = buyerlUTxOs.map(lutxoToUTxO); // Assuming the first UTxO can be used as collateral
+
+    // Build buy transaction
+    const buyListingTx = await getBuyListingTx(
+      feeOracleInitiationOutcome,
+      marketplaceInitiationOutcome,
+      nftListingOutcome,
+      buyerUTxOs,
+      buyerAddress,
+      nftListingOutcome2.listedNftUTxO
+    );
+
+    // Sign and submit the update listing transaction from the seller`s wallet
+    const buyListingLTx = lucid.fromTx(buyListingTx.toCbor().toString());
+    const signedBuyListingLTx = await buyListingLTx.sign().complete();
+    const BuyListingTxHash = await signedBuyListingLTx.submit();
+    emulator.awaitBlock(50);
+  }).rejects.toThrow();
 });

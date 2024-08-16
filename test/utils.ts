@@ -65,14 +65,14 @@ export interface MarketplaceInitiationOutcome {
   marketplaceRefScriptUTxO: UTxO;
   marketplaceScript: Script<"PlutusScriptV2">;
   currencyPolicyId: Hash28 | "";
-  currencyTokenName: string;
+  currencyTokenName: Uint8Array;
 }
 
 export interface NftListingOutcome {
   sellerAddress: Address;
   listedNftUTxO: UTxO;
   listNftPolicy: Uint8Array;
-  listNftTokenName_01: Uint8Array;
+  listNftTokenName: Uint8Array;
 }
 
 export async function initiateFeeOracle(
@@ -261,9 +261,9 @@ export async function getFeeUpdateTx(
 export async function initiateMarketplace(
   emulator: Emulator,
   lucid: Lucid,
-  ownerSeedPhrase: string, //users.owner
+  ownerSeedPhrase: string, // users.owner
   currencyPolicyId: Hash28 | "", // "" for ADA
-  currencyTokenName: Uint8Array | "", // "" for ADA
+  currencyTokenName: Uint8Array, // "" for ADA
   feeOracleInitiationOutcome: FeeOracleInitiationOutcome
 ): Promise<MarketplaceInitiationOutcome> {
   const feeOracleNftPolicyHash =
@@ -279,12 +279,13 @@ export async function initiateMarketplace(
   const marketplaceRefUTxO = lutxoToUTxO(marketplaceRefLUTxO);
 
   const isAda = currencyPolicyId === "";
+
   // Create the marketplace contract
   // If we're using ADA, use an empty string for the currency symbol. Otherwise, use the buffer representation of the provided policy ID.
   // If we're using ADA, use an empty string for the token name. Otherwise, use the provided token name
   const marketplaceScript = makeMarketplace(
     PCurrencySymbol.from(isAda ? "" : currencyPolicyId.toBuffer()),
-    PTokenName.from(isAda ? "" : currencyTokenName),
+    PTokenName.from(isAda ? new Uint8Array([]) : currencyTokenName),
     PAddress.fromData(pData(Address.fromString(ownerAddr).toData())), // owner of the marketplace
     PCurrencySymbol.from(feeOracleNftPolicyHash.toBuffer()), // oracleNFTSymbol
     PTokenName.from(tokenName) // oracleNFTname
@@ -347,8 +348,8 @@ export async function getListNFTTx(
   changeAddress: Address,
   nftUTxO: UTxO,
   marketplaceAddress: Address,
-  listNftTokenName: Uint8Array,
   listNftPolicy: Uint8Array,
+  listNftTokenName: Uint8Array,
   initialListingPrice: number | bigint,
   sellerAddress: Address
 ): Promise<Tx> {
@@ -392,8 +393,9 @@ export async function listNft(
   lucid: Lucid,
   marketplaceInitiationOutcome: MarketplaceInitiationOutcome,
   sellerSeedPhrase: string, // users.seller, who lists the NFT on the marketplace
-  listNftPolicyHash_01: Hash28,
-  listNftTokenName_01: Uint8Array
+  listNftPolicyHash: Hash28,
+  listNftTokenName: Uint8Array,
+  initialListingPrice: number | bigint
 ): Promise<NftListingOutcome> {
   const marketplaceAddress = marketplaceInitiationOutcome.marketplaceAddr;
 
@@ -405,23 +407,21 @@ export async function listNft(
   const listingUTxO = sellerUTxOs.find(
     // Assuming multiple UTxOs could be present, we find the one with the NFT
     (u) =>
-      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) ===
-      BigInt(1)
+      u.resolved.value.get(listNftPolicyHash, listNftTokenName) === BigInt(1)
   )!;
 
   // Constants for listing transaction
   const sellerAddress = listingUTxO.resolved.address;
   const changeAddress = listingUTxO.resolved.address;
-  const listNftPolicy = listNftPolicyHash_01.toBuffer(); // in Uint8Array format required for getListNFTTx
-  const initialListingPrice: number = 10_000;
+  const listNftPolicy = listNftPolicyHash.toBuffer();
 
   // Build the listing transaction
   const nftListingTx = await getListNFTTx(
     changeAddress,
-    listingUTxO, //UTxO containing the NFT to be listed
+    listingUTxO, // UTxO containing the NFT to be listed
     marketplaceAddress,
-    listNftTokenName_01, // Uint8Array
-    listNftPolicy, // Uint8Array
+    listNftPolicy,
+    listNftTokenName,
     initialListingPrice,
     sellerAddress
   );
@@ -438,45 +438,31 @@ export async function listNft(
   const marketplaceLUTxOs = await lucid.utxosAt(marketplaceAddress.toString());
   const marketplaceUTxO = marketplaceLUTxOs.map(lutxoToUTxO);
   const listedNftUTxO = marketplaceUTxO.find(
-    (u) =>
-      u.resolved.value.get(listNftPolicyHash_01, listNftTokenName_01) ===
-      BigInt(1)
+    (u) => u.resolved.value.get(listNftPolicy, listNftTokenName) === BigInt(1)
   )!;
 
   return {
     listedNftUTxO, // For update test
     sellerAddress, // For update test, cancel test
     listNftPolicy, // For buy test
-    listNftTokenName_01, // For buy test
+    listNftTokenName, // For buy test
   };
 }
 
 export async function getUpdateListingTx(
+  marketplace: MarketplaceInitiationOutcome,
+  listing: NftListingOutcome,
   newPrice: number | bigint,
-  listedNftUTxO: UTxO,
   collateral: UTxO,
-  ownerAddress: Address, // Owner of the listing
-  marketplaceSource: UTxO,
-  marketplaceAddress: Address,
   badPrice?: number | bigint, // Can be set to 0 for a malicious attempt
   adversaryAddress?: Address, // users.adversary can be used to create a failed update of the listing
   badPolicy?: Uint8Array, // A random NFT policy can be provided to create a failed update of the listing
   badTokenName?: Uint8Array
 ): Promise<Tx> {
-  const initialDatum = listedNftUTxO.resolved.datum;
+  const initialDatum = listing.listedNftUTxO.resolved.datum;
   if (!(initialDatum instanceof DataConstr))
     throw new Error("listing utxo datum is not inline");
   const initialDatumFields = initialDatum.fields;
-
-  // truthiness (research)
-  // Alternative way of expressing the logic of the turnary operator used in updatedDatumPrice
-  // let updatedDatumPolicy: DataB;
-  // if (badPolicy  != undefined){
-  //   updatedDatumPolicy = initialDatumFields[2]
-  // }
-  // else (
-  //   updatedDatumPolicy = new DataB(badPolicy)
-  // )
 
   // For testing purposes we can create a Datum with a bad price, policy, or token name when the optional arguments badPrice, adversaryAddress, badPolicy, or badTokenName are provided
   const updatedDatumPrice = new DataI(badPrice ?? newPrice);
@@ -502,9 +488,9 @@ export async function getUpdateListingTx(
   return await updateListingTxBuilder.build({
     inputs: [
       {
-        utxo: listedNftUTxO,
+        utxo: listing.listedNftUTxO,
         referenceScriptV2: {
-          refUtxo: marketplaceSource,
+          refUtxo: marketplace.marketplaceRefScriptUTxO,
           datum: "inline",
           redeemer: new DataConstr(2, [new DataI(newPrice)]), // in src/contracts/marketplace.ts it can be observed under the SaleAction redeemer, that index 2 is the Update action ( index 0 -> Buy, index 1 -> Close, index 2 -> Update)
         },
@@ -513,141 +499,168 @@ export async function getUpdateListingTx(
     ],
     outputs: [
       {
-        address: marketplaceAddress,
-        value: listedNftUTxO.resolved.value,
+        address: marketplace.marketplaceAddr,
+        value: listing.listedNftUTxO.resolved.value,
         datum: updatedDatum,
       },
     ],
     collaterals: [collateral],
-    requiredSigners: [ownerAddress.paymentCreds.hash],
-    changeAddress: ownerAddress,
+    collateralReturn: {
+      address: listing.sellerAddress,
+      value: Value.sub(collateral.resolved.value, Value.lovelaces(15_000_000)),
+    },
+    requiredSigners: [listing.sellerAddress.paymentCreds.hash],
+    changeAddress: listing.sellerAddress,
   });
 }
 
 export async function getCancelListingTx(
-  listingUTxO: UTxO,
+  marketplace: MarketplaceInitiationOutcome,
+  listing: NftListingOutcome,
   collateral: UTxO,
-  sellerAddress: Address,
-  marketplaceSource: UTxO
+  targetListingUTxO?: UTxO
 ): Promise<Tx> {
+  const initialInputs = [
+    {
+      utxo: listing.listedNftUTxO,
+      referenceScriptV2: {
+        refUtxo: marketplace.marketplaceRefScriptUTxO,
+        datum: "inline",
+        redeemer: new DataConstr(1, []),
+      },
+    },
+    { utxo: collateral },
+  ];
+
+  const finalInputs = targetListingUTxO
+    ? [
+        ...initialInputs,
+        {
+          utxo: targetListingUTxO,
+          referenceScriptV2: {
+            refUtxo: marketplace.marketplaceRefScriptUTxO,
+            datum: "inline",
+            redeemer: new DataConstr(1, []),
+          },
+        },
+      ]
+    : initialInputs;
+
   const cancelListingTxBuilder = new TxBuilder(await getProtocolParams());
   return await cancelListingTxBuilder.build({
-    inputs: [
-      {
-        utxo: listingUTxO,
-        referenceScriptV2: {
-          refUtxo: marketplaceSource,
-          datum: "inline",
-          redeemer: new DataConstr(1, []),
-        },
-      },
-      { utxo: collateral },
-    ],
+    inputs: finalInputs,
     collaterals: [collateral],
-    requiredSigners: [sellerAddress.paymentCreds.hash],
-    changeAddress: sellerAddress,
+    collateralReturn: {
+      address: listing.sellerAddress,
+      value: Value.sub(collateral.resolved.value, Value.lovelaces(15_000_000)),
+    },
+    requiredSigners: [listing.sellerAddress.paymentCreds.hash],
+    changeAddress: listing.sellerAddress,
   });
 }
 
 export async function getBuyListingTx(
-  listedNftUTxO: UTxO,
-  marketplaceSource: UTxO,
-  collateralUTxO: UTxO,
-  returnAddress: Address,
-  feeOracleUTxO: UTxO,
-  buyer: PubKeyHash | PublicKey | Address, // Choose a type
-  listNftPolicy: Uint8Array,
-  listNftTokenName_01: Uint8Array,
-  currencyPolicyId: "" | Hash28,
-  currencyTokenName: Uint8Array, // currently a string needs to be transformed to Uint8Array
-  protocolFeeAmt: number | bigint,
-  marketplaceOwnerAddress: Address,
-  finalPrice: number | bigint,
-  isAda: boolean 
-
+  feeOracle: FeeOracleInitiationOutcome,
+  marketplace: MarketplaceInitiationOutcome,
+  listing: NftListingOutcome,
+  buyerUTxOs: UTxO[],
+  buyerAddress: Address,
+  additionalListedNftUTxO?: UTxO
 ): Promise<Tx> {
-  let buyerPkh: PubKeyHash = undefined as any;
-  if (buyer instanceof PubKeyHash) buyerPkh = buyer;
-  if (buyer instanceof PublicKey) buyerPkh = buyer.hash;
-  if (buyer instanceof Address) buyerPkh = buyer.paymentCreds.hash;
-  if (!buyerPkh)
-    throw new Error("unable to derive 'buyerPkh' form " + buyer.toString());
+  const buyerPkh = buyerAddress.paymentCreds.hash;
 
-  const createPaymentAssetEntry = (amount: number | bigint) => 
-    isAda
-      ? Value.singleAssetEntry(
-        currencyPolicyId, // "" for ADA
-        currencyTokenName, // "" for ADA
-        amount // field for protocolFeeAmt and finalPrice
-      )
+  // Price / Fee Operations
+  const nftSaleDatum = listing.listedNftUTxO.resolved.datum;
+  const feeNumeratorDatum = feeOracle.feeOracleUTxOs[1].resolved.datum;
+
+  if (
+    !(nftSaleDatum instanceof DataConstr && feeNumeratorDatum instanceof DataI)
+  )
+    throw "watermelons";
+
+  const feeNumerator = feeNumeratorDatum.int;
+
+  const saleFields = nftSaleDatum.fields;
+  if (!(saleFields[0] instanceof DataI)) throw "cherrys";
+
+  const fullPrice = saleFields[0].int;
+  const protocolFeeAmt = (fullPrice * feeNumerator) / 1_000_000n;
+
+  const finalPrice = fullPrice - protocolFeeAmt;
+
+  const createPaymentAssetEntry = (amount: number | bigint) =>
+    marketplace.currencyPolicyId === ""
+      ? Value.lovelaceEntry(amount)
       : Value.singleAssetEntry(
-          new Hash28(currencyPolicyId),
-          currencyTokenName,
+          marketplace.currencyPolicyId, // Hash28 for CNTs
+          marketplace.currencyTokenName, // Uint8Array for CNTs
           amount // field for protocolFeeAmt and finalPrice
         );
 
-  const buyListingTxBuilder = new TxBuilder(await getProtocolParams());
-  return await buyListingTxBuilder.buildSync({
-    inputs: [
-      {
-        utxo: listedNftUTxO,
-        referenceScriptV2: {
-          refUtxo: marketplaceSource,
-          redeemer: SaleAction.Buy({}),
-          datum: "inline",
-        },
+  const buyersInitialInputs = buyerUTxOs.map((utxo) => ({ utxo }));
+
+  const initialInputs = [
+    ...buyersInitialInputs,
+    {
+      utxo: listing.listedNftUTxO,
+      referenceScriptV2: {
+        refUtxo: marketplace.marketplaceRefScriptUTxO,
+        redeemer: SaleAction.Buy({}),
+        datum: "inline",
       },
-      { utxo: collateralUTxO },
-    ],
-    collaterals: [collateralUTxO],
+    },
+  ];
+
+  const finalInputs = additionalListedNftUTxO
+    ? [...initialInputs, { utxo: additionalListedNftUTxO }]
+    : initialInputs;
+
+  const initialOutputs = [
+    // Buyer receives the NFT
+    {
+      address: buyerAddress,
+      value: new Value([
+        Value.lovelaceEntry(2_000_000),
+        Value.singleAssetEntry(
+          new Hash28(listing.listNftPolicy),
+          listing.listNftTokenName,
+          1
+        ),
+      ]),
+    },
+    // Marketplace Owner receives the protocol fee
+    {
+      address: marketplace.marketplaceOwnerAddress,
+      value: new Value([
+        Value.lovelaceEntry(2_000_000),
+        createPaymentAssetEntry(protocolFeeAmt),
+      ]),
+    },
+    // Seller gets paid the final price (owner of the listing)
+    {
+      address: listing.sellerAddress,
+      value: new Value([
+        Value.lovelaceEntry(2_000_000),
+        createPaymentAssetEntry(finalPrice),
+      ]),
+    },
+  ];
+
+  const buyListingTxBuilder = new TxBuilder(await getProtocolParams());
+  return buyListingTxBuilder.buildSync({
+    inputs: finalInputs,
+    collaterals: [buyerUTxOs[0]],
     collateralReturn: {
-      address: returnAddress,
+      address: buyerAddress,
       value: Value.sub(
-        collateralUTxO.resolved.value,
+        buyerUTxOs[0].resolved.value,
         Value.lovelaces(15_000_000)
       ),
     },
-    readonlyRefInputs: [feeOracleUTxO],
+    readonlyRefInputs: [feeOracle.feeOracleUTxOs[1]],
     requiredSigners: [new PubKeyHash(buyerPkh)],
-    outputs: [
-      // users.buyer gets sent the NFT
-      {
-        address: returnAddress,
-        value: new Value([
-          Value.lovelaceEntry(2_000_000),
-          Value.singleAssetEntry(
-            new Hash28(listNftPolicy),
-            listNftTokenName_01,
-            1
-          ),
-        ]),
-      },
-      // users.owner gets paid the protocol fee
-      {
-        address: marketplaceOwnerAddress,
-        value: new Value([
-          Value.lovelaceEntry(2_000_000),
-          Value.singleAssetEntry(
-            new Hash28(currencyPolicyId),
-            currencyTokenName,
-            protocolFeeAmt
-          ),
-        ]),
-      },
-      // users.seller gets paid the final price
-      {
-        address: returnAddress,
-        value: new Value([
-          Value.lovelaceEntry(2_000_000),
-          Value.singleAssetEntry(
-            new Hash28(currencyPolicyId),
-            currencyTokenName,
-            finalPrice
-          ),
-        ]),
-      },
-    ],
-    changeAddress: returnAddress,
+    outputs: initialOutputs,
+    changeAddress: buyerAddress,
   });
 }
 
