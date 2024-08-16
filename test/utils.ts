@@ -36,6 +36,7 @@ import {
   PublicKey,
   TxBuilder,
   DataConstr,
+  punsafeConvertType,
 } from "@harmoniclabs/plu-ts";
 
 import { NFTSale, SaleAction } from "../src/contracts/marketplace.ts";
@@ -356,7 +357,15 @@ export async function getListNFTTx(
   sellerAddress: Address
 ): Promise<Tx> {
   const listingTxBuilder = new TxBuilder(await getProtocolParams());
-
+  const nftSaleDatum = NFTSale.NFTSale({
+    policy: pDataB(listNftPolicy),
+    price: pDataI(initialListingPrice),
+    seller: punsafeConvertType(
+      pData(sellerAddress.toData()),
+      PAddress.type
+    ) as any,
+    tokenName: pDataB(listNftTokenName),
+  });
   return listingTxBuilder.buildSync({
     inputs: [{ utxo: nftUTxO }],
     collaterals: [nftUTxO],
@@ -375,12 +384,7 @@ export async function getListNFTTx(
             1
           ),
         ]),
-        datum: NFTSale.NFTSale({
-          policy: pDataB(listNftPolicy),
-          price: pDataI(initialListingPrice),
-          seller: pDataB(sellerAddress.paymentCreds.hash.toString()),
-          tokenName: pDataB(listNftTokenName),
-        }),
+        datum: nftSaleDatum,
       },
     ],
     changeAddress: changeAddress,
