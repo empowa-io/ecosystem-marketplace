@@ -15,3 +15,5 @@ You will need to have a `secret_testnet` folder at the root of the local reposit
 ```bash
 pnpm run test-al
 ```
+
+![empowa-marketplace-unit-tests.gif](test/assets/images/empowa-marketplace-unit-tests.gif)
