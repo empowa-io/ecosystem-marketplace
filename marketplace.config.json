@@ -5,7 +5,7 @@
         "preprod",
         "preview"
     ],
-    "network": "preview",
+    "network": "preprod",
 
     "envFolderPath_comment": [
         "folder that will be used by the various sub commands to generate files"
