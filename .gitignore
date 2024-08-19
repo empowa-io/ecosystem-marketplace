@@ -1,13 +1,4 @@
 node_modules/
 dist/
-secret_testnet/
-secrets/
+local/
 marketplace.config.local.json/
-testnet/
-test/feeOracle.test.ts/ 
-test/getMintManyTx.ts/
-test/getMintOneShotTest.ts/
-test/marketplaceold.test.ts/
-test/trail.test.ts/
-test/deployFeeOracleTest.ts/
-#audit/

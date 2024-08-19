@@ -72,18 +72,14 @@ export const contract = pfn([
         // inlined
         const singedBySeller = pforce( delSingedBySeller );
 
-        // audit 08 (can't have single input)
+        // audit 08
         const _in = plet(
             plet(
                 pmatch( purpose )
                 .onSpending(({ utxoRef }) => utxoRef )
                 ._(_ => perror( PTxOutRef.type ) )
             ).in( spendingRef =>
-                pmatch(
-                    tx.inputs.find( _in => _in.utxoRef.eq( spendingRef ))
-                )
-                .onJust(({ val }) => val )
-                .onNothing(_ => perror( PTxInInfo.type ) )
+                tx.inputs.filter( _in => _in.utxoRef.eq( spendingRef )).head
             )
         );
         // we still require first output to be correct
@@ -91,12 +87,17 @@ export const contract = pfn([
 
         const ownAddr = plet( _in.resolved.address );
         
-        // const ownHash = plet(
-        //     punBData.$(
-        //         _in.resolved.address.credential
-        //         .raw.fields.head
-        //     )
-        // );
+        // audit 08
+        // inlined
+        const singleInputFormSelf = (
+            pisEmpty.$(
+                // filter by script credentials only
+                // we don't care if the credentials are "own"
+                // because we are testing for a single script input overall
+                // so if this contract is running, is implicit the credentials are own
+                tx.inputs.filter( isInputFromScript ).tail
+            )
+        );
 
         const rawFields = sale.raw.fields;
 
@@ -120,7 +121,8 @@ export const contract = pfn([
         const validOut = validOutDatum.and( validOutAddress )
 
         return singedBySeller
-        .and(  validOut );
+        .and(  validOut )
+        .and(  singleInputFormSelf );
     })
     .onBuy( _ => {
 
@@ -200,7 +202,7 @@ export const contract = pfn([
     });
 });
 
-function makeMarketplaceContract(
+export function makeMarketplaceContract(
     paymentAssetSym: Term<typeof PCurrencySymbol>,
     paymentAssetName: Term<typeof PTokenName>,
     owner: Term<typeof PAddress>,
