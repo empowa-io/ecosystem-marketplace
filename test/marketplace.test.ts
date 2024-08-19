@@ -1,4 +1,4 @@
-import { Emulator, Lucid, Tx as LTx } from "@anastasia-labs/lucid-cardano-fork";
+import { Emulator, Lucid } from "@anastasia-labs/lucid-cardano-fork";
 
 import {
   LucidContext,
@@ -15,7 +15,7 @@ import {
   FeeOracleInitiationOutcome,
   initiateFeeOracle,
   getBuyListingTx,
-} from "./utils.ts";
+} from "./utils.js";
 
 import { Hash28, Address } from "@harmoniclabs/plu-ts";
 import { beforeEach, test, expect } from "vitest";

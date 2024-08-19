@@ -5,7 +5,6 @@ import {
   UTxO as LUTxO,
   Assets as LAssets,
   generateSeedPhrase,
-  Data,
   Emulator,
   Lucid,
 } from "@anastasia-labs/lucid-cardano-fork";
@@ -33,18 +32,23 @@ import {
   PTokenName,
   PaymentCredentials,
   PubKeyHash,
-  PublicKey,
   TxBuilder,
   DataConstr,
   punsafeConvertType,
+  PTxOutRef,
+  ProtocolParamters,
+  CborPositiveRational,
+  ExBudget,
 } from "@harmoniclabs/plu-ts";
 
-import { NFTSale, SaleAction } from "../src/contracts/marketplace.ts";
-import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
+import { NFTSale, SaleAction } from "../src/contracts/marketplace.js";
 import { tokenName } from "../app/constants";
 import { makeFeeOracle } from "../src/contracts/feeOracle";
 import { makeMarketplace } from "../src/contracts/marketplace";
-import { getProtocolParams } from "../app/utils/getProtocolParams";
+import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy.js";
+import { existsSync } from "fs";
+import { readFile, writeFile } from "fs/promises";
+import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
 
 export type LucidContext = {
   lucid: Lucid;
@@ -73,6 +77,46 @@ export interface NftListingOutcome {
   listedNftUTxO: UTxO;
   listNftPolicy: Uint8Array;
   listNftTokenName: Uint8Array;
+}
+
+export async function getMintOneShotTx(
+  txBuilder: TxBuilder,
+  utxoToSpend: UTxO,
+  returnAddress: Address
+): Promise<{
+  nftPolicySource: Script<"PlutusScriptV2">;
+  tx: Tx;
+}> {
+  const utxo = utxoToSpend;
+  const addr = returnAddress;
+  const ref = utxo.utxoRef;
+  const feeOracleNftPolicy = makeFeeOracleNftPolicy(
+    PTxOutRef.fromData(pData(ref.toData()))
+  );
+  const policy = feeOracleNftPolicy.hash;
+  const mintedValue = new Value([Value.singleAssetEntry(policy, tokenName, 1)]);
+  return {
+    tx: txBuilder.buildSync({
+      inputs: [{ utxo }],
+      collaterals: [utxo],
+      collateralReturn: {
+        address: addr,
+        value: Value.sub(utxo.resolved.value, Value.lovelaces(5_000_000)),
+      },
+      mints: [
+        {
+          value: mintedValue,
+          script: {
+            inline: feeOracleNftPolicy,
+            policyId: policy,
+            redeemer: new DataI(0),
+          },
+        },
+      ],
+      changeAddress: addr,
+    }),
+    nftPolicySource: feeOracleNftPolicy,
+  };
 }
 
 export async function initiateFeeOracle(
@@ -112,7 +156,7 @@ export async function initiateFeeOracle(
   const utxosAfterMint = lutxosAfterMint.map(lutxoToUTxO);
   const beaconUTxO = utxosAfterMint.find(
     // Assuming multiple UTxOs are present, we find the one with the NFT
-    (u) => u.resolved.value.get(feeOracleNftPolicyHash, tokenName) === 1n
+    (u) => u.resolved.value.get(feeOracleNftPolicyHash, tokenName) === BigInt(1)
   )!;
 
   // Prepare for Fee Oracle deployment
@@ -811,4 +855,84 @@ export function generateRandomTokenName(): Uint8Array {
   }
 
   return result;
+}
+
+let _pps: ProtocolParamters | undefined = undefined;
+const ppPath = `./test/protocol_params.json`;
+
+async function getProtocolParams(): Promise<ProtocolParamters> {
+  const ppsFromJsonString = (jsonStr: string): ProtocolParamters => {
+    // {{{
+    const json = JSON.parse(jsonStr, (k, v) => {
+      if (typeof v === "string") {
+        try {
+          return BigInt(v);
+        } finally {
+          return v;
+        }
+      }
+      return v;
+    });
+    const pps = {} as ProtocolParamters;
+    pps.txFeePerByte = BigInt(json.txFeePerByte);
+    pps.txFeeFixed = BigInt(json.txFeeFixed);
+    pps.maxBlockBodySize = BigInt(json.maxBlockBodySize);
+    pps.maxTxSize = BigInt(json.maxTxSize);
+    pps.maxBlockHeaderSize = BigInt(json.maxBlockHeaderSize);
+    pps.stakeAddressDeposit = BigInt(json.stakeAddressDeposit);
+    pps.stakePoolDeposit = BigInt(json.stakePoolDeposit);
+    pps.poolRetireMaxEpoch = BigInt(json.poolRetireMaxEpoch);
+    pps.stakePoolTargetNum = BigInt(json.stakePoolTargetNum);
+    pps.poolPledgeInfluence = CborPositiveRational.fromNumber(
+      json.poolPledgeInfluence
+    );
+    pps.monetaryExpansion = CborPositiveRational.fromNumber(
+      json.monetaryExpansion
+    );
+    pps.treasuryCut = CborPositiveRational.fromNumber(json.treasuryCut);
+    pps.protocolVersion = json.protocolVerision;
+    pps.minPoolCost = BigInt(json.minPoolCost);
+    pps.utxoCostPerByte = BigInt(json.utxoCostPerByte);
+    pps.costModels = {};
+    if (typeof json.costModels.PlutusScriptV1 === "object") {
+      pps.costModels.PlutusScriptV1 = {} as any;
+      for (const k in json.costModels.PlutusScriptV1) {
+        (pps.costModels.PlutusScriptV1 as any)[k] = BigInt(
+          json.costModels.PlutusScriptV1[k]
+        );
+      }
+    }
+    if (typeof json.costModels.PlutusScriptV2 === "object") {
+      pps.costModels.PlutusScriptV2 = {} as any;
+      for (const k in json.costModels.PlutusScriptV2) {
+        (pps.costModels.PlutusScriptV2 as any)[k] = BigInt(
+          json.costModels.PlutusScriptV2[k]
+        );
+      }
+    }
+    pps.executionUnitPrices = json.executionUnitPrices;
+    pps.maxTxExecutionUnits = new ExBudget({
+      mem: BigInt(json.maxTxExecutionUnits.memory),
+      cpu: BigInt(json.maxTxExecutionUnits.steps),
+    });
+    pps.maxBlockExecutionUnits = new ExBudget({
+      mem: BigInt(json.maxBlockExecutionUnits.memory),
+      cpu: BigInt(json.maxBlockExecutionUnits.steps),
+    });
+    pps.maxValueSize = BigInt(json.maxValueSize);
+    pps.collateralPercentage = BigInt(json.collateralPercentage);
+    pps.maxCollateralInputs = BigInt(json.maxCollateralInputs);
+    return pps;
+    // }}}
+  };
+  if (_pps) return _pps;
+  if (existsSync(ppPath)) {
+    try {
+      return ppsFromJsonString(await readFile(ppPath, { encoding: "utf-8" }));
+    } catch(e) {
+      throw e;
+    }
+  } else {
+    throw new Error("Protocol parameters file missing.");
+  }
 }

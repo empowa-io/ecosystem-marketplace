@@ -1,8 +1,8 @@
 import { Emulator, Lucid } from "@anastasia-labs/lucid-cardano-fork";
 import { test, expect } from "vitest";
-import { getMintOneShotTx } from "../app/txns/getMintOneShotTx";
 import { makeFeeOracleNftPolicy } from "../src/contracts/feeOracleNftIdPolicy";
 import {
+  getMintOneShotTx,
   getUtxoWithAssets,
   lutxoToUTxO,
   generateAccountSeedPhrase,
