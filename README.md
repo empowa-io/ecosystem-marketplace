@@ -27,3 +27,19 @@ flowchart LR
 ## Docs
 
 see the [`docs` folder](./docs/) for documentation
+
+## Testing Suite
+
+### 1. Install Required Packages
+
+```bash
+pnpm install
+```
+
+### 2. Run Tests
+
+```bash
+pnpm run test-al
+```
+
+![empowa-marketplace-unit-tests.gif](test/assets/images/empowa-marketplace-unit-tests.gif)
