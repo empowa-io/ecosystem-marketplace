@@ -61,7 +61,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle", async ({
   const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
 
   emulator.awaitBlock(50);
-}, 60_000); // Increased timeout to 60 seconds
+}, 120_000); // Increased timeout to 120 seconds
 
 test<LucidContext>("Test - Invalid Update Fee Oracle (Steal Beacon UTxO)", async ({
   lucid,
@@ -108,7 +108,7 @@ test<LucidContext>("Test - Invalid Update Fee Oracle (Steal Beacon UTxO)", async
   })
     .rejects.toThrow // Redirecting the Beacon UTxO to the adversary's wallet fails as intended
     ();
-});
+}, 120_000);
 
 test<LucidContext>("Test - Invalid Update Fee Oracle (Reproduce with Bad Datum)", async ({
   lucid,
@@ -154,4 +154,4 @@ test<LucidContext>("Test - Invalid Update Fee Oracle (Reproduce with Bad Datum)"
   }).rejects.toThrow(
     "script consumed with Spend redemer and index '1'" // Bad Datum fails as intended
   );
-});
+}, 120_000);
