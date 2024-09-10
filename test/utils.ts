@@ -50,6 +50,8 @@ import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import { BlockfrostPluts } from "@harmoniclabs/blockfrost-pluts";
 
+export const TIMEOUT = 120_000;
+
 export type LucidContext = {
   lucid: Lucid;
   users: any;
