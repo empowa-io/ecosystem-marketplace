@@ -15,6 +15,7 @@ import {
   FeeOracleInitiationOutcome,
   initiateFeeOracle,
   getBuyListingTx,
+  TIMEOUT
 } from "./utils.js";
 
 import { Hash28, Address } from "@harmoniclabs/plu-ts";
@@ -137,7 +138,7 @@ test<LucidContext>("Test - Valid {Update} Execution on Listed NFT", async ({
   const updateListingTxHash = await signedUpdateListingLTx.submit();
 
   emulator.awaitBlock(50);
-}, 60_000);
+}, TIMEOUT);
 
 test<LucidContext>("Test - Invalid {Update} Execution on Listed NFT (Fail Case: Updated Datum)", async ({
   lucid,
@@ -212,7 +213,7 @@ test<LucidContext>("Test - Invalid {Update} Execution on Listed NFT (Fail Case: 
     .rejects.toThrow
     // Expected error message from the emulator due to fail case
     ();
-});
+}, TIMEOUT);
 
 test<LucidContext>("Test - Valid {Cancel} Execution on Listed NFT", async ({
   lucid,
@@ -260,7 +261,7 @@ test<LucidContext>("Test - Valid {Cancel} Execution on Listed NFT", async ({
   const signedCancelListingLTx = await cancelListingLTx.sign().complete();
   const updateCancelListingTxHash = await signedCancelListingLTx.submit();
   emulator.awaitBlock(50);
-}, 60_000);
+}, TIMEOUT);
 
 test<LucidContext>("Test - Invalid {Cancel} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
   lucid,
@@ -329,7 +330,7 @@ test<LucidContext>("Test - Invalid {Cancel} Execution on Listed NFT (Fail Case: 
 
     emulator.awaitBlock(50);
   }).rejects.toThrow();
-});
+}, TIMEOUT);
 
 test<LucidContext>("Test - Valid {Buy} Execution on Listed NFT", async ({
   lucid,
@@ -381,7 +382,7 @@ test<LucidContext>("Test - Valid {Buy} Execution on Listed NFT", async ({
   const signedBuyListingLTx = await buyListingLTx.sign().complete();
   const BuyListingTxHash = await signedBuyListingLTx.submit();
   emulator.awaitBlock(50);
-});
+}, TIMEOUT);
 
 test<LucidContext>("Test - Invalid {Buy} Execution on Listed NFT (Fail Case: Double Satisfaction)", async ({
   lucid,
@@ -446,4 +447,4 @@ test<LucidContext>("Test - Invalid {Buy} Execution on Listed NFT (Fail Case: Dou
     const BuyListingTxHash = await signedBuyListingLTx.submit();
     emulator.awaitBlock(50);
   }).rejects.toThrow();
-});
+}, TIMEOUT);

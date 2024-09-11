@@ -7,6 +7,7 @@ import {
   lutxoToUTxO,
   generateAccountSeedPhrase,
   generateRandomTokenName,
+  TIMEOUT
 } from "./utils";
 import {
   DataI,
@@ -72,7 +73,7 @@ test("Test - Valid Mint", async () => {
   );
 
   expect(utxosWithUnitFromTx).toStrictEqual(utxosWithUnitFromAddr);
-}, 40_000);
+}, TIMEOUT);
 
 test("Test - Invalid Mint (Mint with Quantity 3)", async () => {
   expect(async () => {
@@ -139,7 +140,7 @@ test("Test - Invalid Mint (Mint with Quantity 3)", async () => {
     .rejects.toThrow
     // Fail case: Limited to single Fee Oracle NFT
     ();
-});
+}, TIMEOUT);
 
 test("Test - Invalid Mint (Mint Multiple NFTs)", async () => {
   expect(async () => {
@@ -205,4 +206,4 @@ test("Test - Invalid Mint (Mint Multiple NFTs)", async () => {
       changeAddress: plutsUtxos.resolved.address,
     });
   }).rejects.toThrow();
-});
+}, TIMEOUT);

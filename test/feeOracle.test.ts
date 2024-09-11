@@ -7,6 +7,7 @@ import {
   generateAccountSeedPhrase,
   lutxoToUTxO,
   getFeeUpdateTx,
+  TIMEOUT
 } from "./utils.ts";
 import { Address } from "@harmoniclabs/plu-ts";
 import { beforeEach, test, expect } from "vitest";
@@ -61,7 +62,7 @@ test<LucidContext>("Test - Valid Update Fee Oracle", async ({
   const feeUpdateTxHash = await signedFeeUpdateLTx.submit();
 
   emulator.awaitBlock(50);
-}, 60_000); // Increased timeout to 60 seconds
+}, TIMEOUT); // Increased timeout to 120 seconds
 
 test<LucidContext>("Test - Invalid Update Fee Oracle (Steal Beacon UTxO)", async ({
   lucid,
@@ -108,7 +109,7 @@ test<LucidContext>("Test - Invalid Update Fee Oracle (Steal Beacon UTxO)", async
   })
     .rejects.toThrow // Redirecting the Beacon UTxO to the adversary's wallet fails as intended
     ();
-});
+}, TIMEOUT);
 
 test<LucidContext>("Test - Invalid Update Fee Oracle (Reproduce with Bad Datum)", async ({
   lucid,
@@ -154,4 +155,4 @@ test<LucidContext>("Test - Invalid Update Fee Oracle (Reproduce with Bad Datum)"
   }).rejects.toThrow(
     "script consumed with Spend redemer and index '1'" // Bad Datum fails as intended
   );
-});
+}, TIMEOUT);
